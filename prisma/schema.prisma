@@ -1,0 +1,232 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// NOTE: "product" is its own microservice here.
+//   - Product.storeId    -> owned by the store service (no cross-service FK)
+//   - Product.categoryId -> owned by the store service (categories live there)
+//   - *.actorId / *.moderatorId -> owned by the auth/user service
+// These are kept as plain scalar Uuid fields, with no Prisma relation, since
+// there's no real foreign key / join across separate service databases.
+// ---------------------------------------------------------------------------
+
+enum ProductStatus {
+  draft
+  active
+  inactive
+  pending
+  approved
+  rejected
+
+  @@map("product_status")
+}
+
+enum InventoryMovementType {
+  manual
+  sale
+  reservation
+  release
+  audit
+  adjustment
+
+  @@map("inventory_movement_type")
+}
+
+enum ModerationAction {
+  approved
+  rejected
+
+  @@map("moderation_action")
+}
+
+enum PromotionType {
+  percentage
+  fixed
+
+  @@map("promotion_type")
+}
+
+enum PromotionStatus {
+  active
+  scheduled
+  inactive
+  expired
+
+  @@map("promotion_status")
+}
+
+model Product {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  brand             String?
+  description       String        @default("")
+  price             Decimal       @db.Decimal(19, 4)
+  rating            Decimal       @default(0) @db.Decimal(3, 2)
+  reviewsCount      Int           @default(0) @map("reviews_count")
+  storeId           String        @map("store_id") @db.Uuid
+  categoryId        String        @map("category_id") @db.Uuid
+  lowStockThreshold Int           @default(10) @map("low_stock_threshold")
+  sku               String?
+  tags              String[]      @default([])
+  specs             Json          @default("{}")
+  variants          Json          @default("[]")
+  status            ProductStatus @default(draft)
+  views             Int           @default(0)
+  soldCount         Int           @default(0) @map("sold_count")
+  wishlistCount     Int           @default(0) @map("wishlist_count")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(6)
+
+  images             ProductImage[]
+  inventory          Inventory?
+  inventoryMovements InventoryMovement[]
+  inventoryAudits    InventoryAudit[]
+  moderationHistory  ProductModerationHistory[]
+  promotionProducts  PromotionProduct[]
+
+  @@index([storeId, status, createdAt(sort: Desc)], map: "idx_products_store_status")
+  @@index(categoryId, map: "idx_products_category")
+  @@index(price, map: "idx_products_price")
+  @@index(rating(sort: Desc), map: "idx_products_rating")
+  @@index([storeId, sku], map: "idx_products_sku")
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  url       String
+  isDefault Boolean  @default(false) @map("is_default")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder, id], map: "idx_product_images_product")
+  @@map("product_images")
+}
+
+model Inventory {
+  productId String   @id @map("product_id") @db.Uuid
+  stock     Int      @default(0)
+  reserved  Int      @default(0)
+  threshold Int      @default(10)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([stock, threshold], map: "idx_inventory_low_stock")
+  @@map("inventory")
+}
+
+model InventoryMovement {
+  id              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId       String                 @map("product_id") @db.Uuid
+  delta           Int
+  quantityBefore  Int                    @map("quantity_before")
+  quantityAfter   Int                    @map("quantity_after")
+  type            InventoryMovementType
+  referenceType   String?                @map("reference_type")
+  referenceId     String?                @map("reference_id")
+  actorId         String?                @map("actor_id") @db.Uuid
+  reason          String?
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([productId, createdAt(sort: Desc)], map: "idx_inventory_movements_product_date")
+  @@index([referenceType, referenceId], map: "idx_inventory_movements_reference")
+  @@map("inventory_movements")
+}
+
+model InventoryAudit {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId      String   @map("product_id") @db.Uuid
+  expectedStock  Int      @map("expected_stock")
+  countedStock   Int      @map("counted_stock")
+  difference     Int
+  reason         String?
+  notes          String?
+  moderatorId    String   @map("moderator_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([productId, createdAt(sort: Desc)], map: "idx_inventory_audits_product_date")
+  @@index([moderatorId, createdAt(sort: Desc)], map: "idx_inventory_audits_moderator_date")
+  @@map("inventory_audits")
+}
+
+model ProductModerationHistory {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId       String           @map("product_id") @db.Uuid
+  actorId         String           @map("actor_id") @db.Uuid
+  action          ModerationAction
+  reason          String?
+  isAdminOverride Boolean          @default(false) @map("is_admin_override")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([productId, createdAt(sort: Desc)], map: "idx_product_moderation_history_product")
+  @@map("product_moderation_history")
+}
+
+model Promotion {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId             String?         @map("store_id") @db.Uuid
+  name                String
+  type                PromotionType
+  discount            Decimal         @db.Decimal(19, 4)
+  startDate           DateTime        @map("start_date") @db.Date
+  endDate             DateTime        @map("end_date") @db.Date
+  status              PromotionStatus @default(scheduled)
+  code                String?
+  minimumOrderAmount  Decimal?        @map("minimum_order_amount") @db.Decimal(19, 4)
+  maximumDiscount     Decimal?        @map("maximum_discount") @db.Decimal(19, 4)
+  usageLimit          Int?            @map("usage_limit")
+  usedCount           Int             @default(0) @map("used_count")
+  isAutomatic         Boolean         @default(false) @map("is_automatic")
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  products PromotionProduct[]
+  usages   PromotionUsage[]
+
+  @@index([storeId, startDate, endDate, status], map: "idx_promotions_store_dates")
+  @@map("promotions")
+}
+
+model PromotionProduct {
+  promotionId String @map("promotion_id") @db.Uuid
+  productId   String @map("product_id") @db.Uuid
+
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([promotionId, productId])
+  @@index(productId, map: "idx_promotion_products_product")
+  @@map("promotion_products")
+}
+
+model PromotionUsage {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  promotionId     String   @map("promotion_id") @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  orderId         String?  @map("order_id")
+  discountAmount  Decimal  @map("discount_amount") @db.Decimal(19, 4)
+  usedAt          DateTime @default(now()) @map("used_at") @db.Timestamptz(6)
+
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+
+  @@index([promotionId, usedAt(sort: Desc)], map: "idx_promotion_usages_promotion")
+  @@index([userId, usedAt(sort: Desc)], map: "idx_promotion_usages_user")
+  @@map("promotion_usages")
+}
