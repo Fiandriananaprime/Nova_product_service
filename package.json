@@ -2,7 +2,7 @@
   "name": "nova_product_service",
   "version": "0.0.0",
   "description": "Product microservice for managing NovaMarket products, catalog, pricing, and inventory",
-  "main": "index.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",

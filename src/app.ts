@@ -20,7 +20,7 @@ registerReady(app, {
 })
 
 registerVersion(app, {
-  service: "user service",
+  service: "product service",
   version: process.env["SERVICE_VERSION"] ?? "unknown",
   commit: process.env["GIT_COMMIT"] ?? "unknown"
 });
