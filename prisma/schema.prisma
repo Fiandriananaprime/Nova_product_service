@@ -16,13 +16,18 @@ datasource db {
 // there's no real foreign key / join across separate service databases.
 // ---------------------------------------------------------------------------
 
-enum ProductStatus {
+enum ProductModerationStatus {
   draft
-  active
-  inactive
   pending
   approved
   rejected
+
+  @@map("product_moderation_status")
+}
+
+enum ProductStatus {
+  active
+  inactive
 
   @@map("product_status")
 }
@@ -75,14 +80,15 @@ model Product {
   sku               String?
   tags              String[]      @default([])
   specs             Json          @default("{}")
-  variants          Json          @default("[]")
-  status            ProductStatus @default(draft)
+  variants          Json          @default("[]")  
   views             Int           @default(0)
   soldCount         Int           @default(0) @map("sold_count")
   wishlistCount     Int           @default(0) @map("wishlist_count")
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  moderationStatus ProductModerationStatus @default(draft) @map("moderation_status")
+  status           ProductStatus           @default(inactive)
 
   images             ProductImage[]
   inventory          Inventory?
