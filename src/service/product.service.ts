@@ -1,5 +1,5 @@
 import type { ProductRepository } from "../repository/product.repository.js";
-import type { GetProductQueryParam } from "../types/product.js";
+import type { GetProductQueryParam, ProductSummary } from "../types/product.js";
 
 export class ProductService {
     constructor(
@@ -10,5 +10,11 @@ export class ProductService {
         params: GetProductQueryParam
     ){
         return this.productRepository.findProducts(params)
+    }
+
+    async getFeaturedProducts() :Promise<ProductSummary[]>{
+        const products = await this.productRepository.getFeaturedProducts();
+
+        return products
     }
 }

@@ -66,6 +66,38 @@ enum PromotionStatus {
   @@map("promotion_status")
 }
 
+enum ReviewStatus {
+  published
+  hidden
+  pending
+  rejected
+}
+
+model Review {
+  id              String       @id @default(uuid()) @db.Uuid
+  productId       String       @db.Uuid
+  productName     String
+  storeId         String       @db.Uuid
+  customerId      String       @db.Uuid
+  customerName    String
+  rating          Int
+  comment         String
+  date            DateTime     @default(now())
+  replied         Boolean      @default(false)
+  reply           String?
+  replyDate       DateTime?
+  productImage    String?
+  verifiedPurchase Boolean     @default(false)
+  helpfulCount    Int          @default(0)
+  status          ReviewStatus @default(pending)
+
+  @@index([productId])
+  @@index([storeId])
+  @@index([customerId])
+  @@index([status])
+  @@index([date])
+}
+
 model Product {
   id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name              String

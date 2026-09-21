@@ -23,7 +23,7 @@ export type ProductSummary = {
     storeId: string;
     categoryId: string;
     status: ProductStatus;
-    images: string;
+    images: string | null;
     createdAt: string;
     tags: string[];
 };

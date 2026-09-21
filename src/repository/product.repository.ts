@@ -1,6 +1,6 @@
 import { prisma } from "../database/prisma.js";
 import type { Prisma } from "../generated/prisma/index.js";
-import type { GetProductQueryParam } from "../types/product.js";
+import type { GetProductQueryParam, ProductSummary } from "../types/product.js";
 
 export class ProductRepository {
 
@@ -97,7 +97,7 @@ export class ProductRepository {
             })
         ]);
 
-        const data = products.map(product => ({
+        const data:ProductSummary[] = products.map(product => ({
             id: product.id,
             name: product.name,
             brand: product.brand,
@@ -107,7 +107,7 @@ export class ProductRepository {
             storeId: product.storeId,
             categoryId: product.categoryId,
             status: product.status,
-            image: product.images[0]?.url ?? null,
+            images: product.images[0]?.url ?? null,
             createdAt: product.createdAt.toISOString(),
             tags: product.tags
         }));
@@ -121,5 +121,38 @@ export class ProductRepository {
                 totalPages: Math.ceil(total / limit)
             }
         };
+    }
+
+    async getFeaturedProducts() :Promise<ProductSummary[]>{
+        return prisma.featuredProduct.findMany({
+                where: {
+                startsAt: { lte: new Date() },
+                OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }],
+            },
+            orderBy: { position: "asc" },
+            take: 8,
+            select: {
+                    id: true,
+                    name: true,
+                    brand: true,
+                    price: true,
+                    rating: true,
+                    reviewsCount: true,
+                    storeId: true,
+                    categoryId: true,
+                    status: true,
+                    createdAt: true,
+                    tags: true,
+                    images: {
+                        where: {
+                            isDefault: true
+                        },
+                        select: {
+                            url: true
+                        },
+                        take: 1
+                    }
+                }
+        })
     }
 }

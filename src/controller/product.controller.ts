@@ -13,4 +13,10 @@ export class ProductController {
         return reply.status(200).send(products)
     }
 
+    async getFeaturedProducts(_request: FastifyRequest,reply: FastifyReply){
+        const featuredProducts = await this.productService.getFeaturedProducts();
+
+        return reply.status(200).send(featuredProducts)
+    }
+
 }
