@@ -1,5 +1,6 @@
+import { ProductNotFoundError } from "../errorHandler/ProductError.js";
 import type { ProductRepository } from "../repository/product.repository.js";
-import type { GetProductQueryParam, ProductSummary } from "../types/product.js";
+import type { GetProductQueryParam } from "../types/product.js";
 
 export class ProductService {
     constructor(
@@ -12,9 +13,17 @@ export class ProductService {
         return this.productRepository.findProducts(params)
     }
 
-    async getFeaturedProducts() :Promise<ProductSummary[]>{
+    async getFeaturedProducts() {
         const products = await this.productRepository.getFeaturedProducts();
 
-        return products
+        return products;
+    }
+
+    async findProductById(id: string){
+        const product = await this.productRepository.findProductById(id);
+
+        if(!product) throw new ProductNotFoundError()
+
+        return product
     }
 }

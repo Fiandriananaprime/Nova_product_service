@@ -16,7 +16,14 @@ export class ProductController {
     async getFeaturedProducts(_request: FastifyRequest,reply: FastifyReply){
         const featuredProducts = await this.productService.getFeaturedProducts();
 
-        return reply.status(200).send(featuredProducts)
+        return reply.status(200).send(featuredProducts);
+    }
+
+    async findProductById(request: FastifyRequest<{Params:{id:string}}>, reply: FastifyReply){
+        const id = request.params.id
+        const product = await this.productService.findProductById(id)
+
+        return reply.status(200).send(product)
     }
 
 }

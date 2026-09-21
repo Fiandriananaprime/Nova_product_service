@@ -9,5 +9,6 @@ export const ProductRoute = (
     app.register((route) => {
         route.get("/products",productController.findProducts.bind(productController))
         route.get("/products/featured",productController.getFeaturedProducts.bind(productController))
+        route.get<{Params:{id: string}}>("/products/:id",productController.findProductById.bind(productController))
     },option)
 }

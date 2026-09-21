@@ -1,6 +1,6 @@
 import { prisma } from "../database/prisma.js";
 import type { Prisma } from "../generated/prisma/index.js";
-import type { GetProductQueryParam, ProductSummary } from "../types/product.js";
+import type { GetProductQueryParam, ProductBuyer, ProductSpecs, ProductSummary, ProductVariant } from "../types/product.js";
 
 export class ProductRepository {
 
@@ -123,36 +123,87 @@ export class ProductRepository {
         };
     }
 
-    async getFeaturedProducts() :Promise<ProductSummary[]>{
-        return prisma.featuredProduct.findMany({
-                where: {
+    async getFeaturedProducts() {
+        const featured = await prisma.featuredProduct.findMany({
+            where: {
                 startsAt: { lte: new Date() },
                 OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }],
             },
             orderBy: { position: "asc" },
             take: 8,
-            select: {
-                    id: true,
-                    name: true,
-                    brand: true,
-                    price: true,
-                    rating: true,
-                    reviewsCount: true,
-                    storeId: true,
-                    categoryId: true,
-                    status: true,
-                    createdAt: true,
-                    tags: true,
-                    images: {
-                        where: {
-                            isDefault: true
+            include: {
+                product: {
+                    select: {
+                        id: true,
+                        name: true,
+                        brand: true,
+                        price: true,
+                        rating: true,
+                        reviewsCount: true,
+                        storeId: true,
+                        categoryId: true,
+                        status: true,
+                        createdAt: true,
+                        tags: true,
+                        images: {
+                            where: {
+                                isDefault: true,
+                            },
+                            select: {
+                                url: true,
+                            },
+                            take: 1,
                         },
-                        select: {
-                            url: true
-                        },
-                        take: 1
-                    }
-                }
+                    },
+                },
+            },
+        });
+
+        const data: ProductSummary[] = featured.map(({ product }) => ({
+            id: product.id,
+            name: product.name,
+            brand: product.brand,
+            price: Number(product.price),
+            rating: Number(product.rating),
+            reviewsCount: product.reviewsCount,
+            storeId: product.storeId,
+            categoryId: product.categoryId,
+            status: product.status,
+            images: product.images[0]?.url ?? null,
+            createdAt: product.createdAt.toISOString(),
+            tags: product.tags,
+        }));
+
+        return {
+            data,
+        };
+    }
+
+    async findProductById(id: string): Promise<ProductBuyer | null>{
+        const product = await prisma.product.findUnique({
+            where: {id},
+            include:{images:true}
         })
+        if(!product) return null
+
+        return {
+            id: product.id,
+            name: product.name,
+            brand: product.brand,
+            description: product.description,
+            price: product.price.toNumber(),
+            rating: product.rating.toNumber(),
+            reviewsCount: product.reviewsCount,
+            storeId: product.storeId,
+            storeName: product.storeName,
+            categoryId: product.categoryId,
+            categoryName: product.categoryName,
+            images: product.images,
+            sku: product.sku,
+            tags: product.tags,
+            specs: product.specs as ProductSpecs,
+            variants: product.variants as ProductVariant[],
+            createdAt: product.createdAt,
+        };
     }
 }
