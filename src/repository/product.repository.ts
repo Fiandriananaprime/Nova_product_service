@@ -1,4 +1,5 @@
 import { prisma } from "../database/prisma.js";
+import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
 import type { Prisma } from "../generated/prisma/index.js";
 import type { GetProductQueryParam, ProductBuyer, ProductSpecs, ProductSummary, ProductVariant } from "../types/product.js";
 
@@ -208,7 +209,29 @@ export class ProductRepository {
     }
 
     async findRelatedProducts( categoryIds: string[], productId: string, limit = 20, cursor?: string ) {
-        const cursorData = cursor ? JSON.parse(Buffer.from(cursor, "base64url").toString()) : null;
+        let cursorData: { createdAt: string; id: string } | null = null;
+
+        if (cursor) {
+            try {
+                const decoded = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as {
+                    createdAt?: unknown;
+                    id?: unknown;
+                };
+
+                if (
+                    typeof decoded.createdAt !== "string" ||
+                    Number.isNaN(new Date(decoded.createdAt).getTime()) ||
+                    typeof decoded.id !== "string" ||
+                    decoded.id.length === 0
+                ) {
+                    throw new Error("Invalid cursor payload");
+                }
+
+                cursorData = { createdAt: decoded.createdAt, id: decoded.id };
+            } catch {
+                throw new InvalidPaginationError("Invalid related products cursor");
+            }
+        }
 
         const where: Prisma.ProductWhereInput = {
             categoryId: {

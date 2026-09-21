@@ -91,6 +91,8 @@ model Review {
   helpfulCount    Int          @default(0)
   status          ReviewStatus @default(pending)
 
+  @@unique([date, id])
+  @@index([productId, status, date(sort: Desc), id(sort: Desc)], map: "idx_reviews_product_status_date_id")
   @@index([productId])
   @@index([storeId])
   @@index([customerId])
@@ -133,6 +135,7 @@ model Product {
   featuredProduct   FeaturedProduct[]
 
   @@index([storeId, status, createdAt(sort: Desc)], map: "idx_products_store_status")
+  @@index([categoryId, status, deletedAt, createdAt(sort: Desc), id(sort: Desc)], map: "idx_products_related_cursor")
   @@index(categoryId, map: "idx_products_category")
   @@index(price, map: "idx_products_price")
   @@index(rating(sort: Desc), map: "idx_products_rating")

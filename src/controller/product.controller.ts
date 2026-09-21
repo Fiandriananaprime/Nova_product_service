@@ -31,7 +31,8 @@ export class ProductController {
         reply: FastifyReply
     ){
         const id = request.params.id;
-        const {limit = 20, cursor} = request.query
+        const {limit: rawLimit, cursor} = request.query
+        const limit = rawLimit === undefined ? 20 : Number(rawLimit);
 
         const products = await this.productService.findRelatedProducts(id,limit,cursor);
 
