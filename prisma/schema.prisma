@@ -107,9 +107,9 @@ model Product {
   rating            Decimal       @default(0) @db.Decimal(3, 2)
   reviewsCount      Int           @default(0) @map("reviews_count")
   storeId           String        @map("store_id") @db.Uuid
-  storeName    String @map("store_name")
+  storeName         String        @map("store_name")
   categoryId        String        @map("category_id") @db.Uuid
-  categoryName String @map("category_name")
+  categoryName      String        @map("category_name")
   lowStockThreshold Int           @default(10) @map("low_stock_threshold")
   sku               String?
   tags              String[]      @default([])

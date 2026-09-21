@@ -3,7 +3,7 @@ import type { Prisma } from "../generated/prisma/index.js";
 import type { GetProductQueryParam, ProductBuyer, ProductSpecs, ProductSummary, ProductVariant } from "../types/product.js";
 
 export class ProductRepository {
-
+    
     async findProducts(params: GetProductQueryParam) {
         const {
             search = "",
@@ -204,6 +204,93 @@ export class ProductRepository {
             specs: product.specs as ProductSpecs,
             variants: product.variants as ProductVariant[],
             createdAt: product.createdAt,
+        };
+    }
+
+    async findRelatedProducts( categoryIds: string[], productId: string, limit = 20, cursor?: string ) {
+        const cursorData = cursor ? JSON.parse(Buffer.from(cursor, "base64url").toString()) : null;
+
+        const where: Prisma.ProductWhereInput = {
+            categoryId: {
+                in: categoryIds
+            },
+            id: {
+                not: productId
+            },
+            status: "active",
+            deletedAt: null,
+
+            ...(cursorData && {
+                OR: [
+                    {
+                        createdAt: {
+                            lt: new Date(cursorData.createdAt)
+                        }
+                    },
+                    {
+                        createdAt: new Date(cursorData.createdAt),
+                        id: {
+                            lt: cursorData.id
+                        }
+                    }
+                ]
+            })
+        };
+
+        const products = await prisma.product.findMany({
+            where,
+            select: {
+                id: true,
+                name: true,
+                brand: true,
+                price: true,
+                rating: true,
+                reviewsCount: true,
+                storeId: true,
+                categoryId: true,
+                status: true,
+                createdAt: true,
+                tags: true,
+                images: {
+                    where: { isDefault: true },
+                    select: { url: true },
+                    take: 1
+                }
+            },
+            orderBy: [
+                { createdAt: "desc" },
+                { id: "desc" }
+            ],
+            take: limit + 1
+        });
+
+        const hasMore = products.length > limit;
+        const data = products.slice(0, limit);
+
+        const last = data[data.length - 1];
+
+        const nextCursor =
+            hasMore && last
+                ? Buffer.from(
+                    JSON.stringify({
+                        createdAt: last.createdAt.toISOString(),
+                        id: last.id
+                    })
+                ).toString("base64url")
+                : null;
+
+        return {
+            data: data.map(p => ({
+                ...p,
+                price: Number(p.price),
+                rating: Number(p.rating),
+                images: p.images[0]?.url ?? null,
+                createdAt: p.createdAt.toISOString()
+            })),
+            meta: {
+                nextCursor,
+                hasMore
+            }
         };
     }
 }

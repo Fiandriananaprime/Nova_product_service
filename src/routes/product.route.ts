@@ -10,5 +10,7 @@ export const ProductRoute = (
         route.get("/products",productController.findProducts.bind(productController))
         route.get("/products/featured",productController.getFeaturedProducts.bind(productController))
         route.get<{Params:{id: string}}>("/products/:id",productController.findProductById.bind(productController))
+        route.get<{Params:{id:string};Querystring:{limit?: number, cursor?: string}}>(
+            "/products/:id/related",productController.findRelatedProducts.bind(productController))
     },option)
 }

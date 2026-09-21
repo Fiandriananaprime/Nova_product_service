@@ -26,4 +26,16 @@ export class ProductController {
         return reply.status(200).send(product)
     }
 
+    async findRelatedProducts(
+        request: FastifyRequest<{Params:{id: string},Querystring:{limit?: number,cursor?: string}}>,
+        reply: FastifyReply
+    ){
+        const id = request.params.id;
+        const {limit = 20, cursor} = request.query
+
+        const products = await this.productService.findRelatedProducts(id,limit,cursor);
+
+        return reply.status(200).send(products)
+    }
+
 }
