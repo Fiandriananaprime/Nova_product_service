@@ -290,7 +290,7 @@ export class ProductRepository {
         const hasMore = products.length > limit;
         const data = products.slice(0, limit);
 
-        const last = data[data.length - 1];
+        const last = data.at(-1);
 
         const nextCursor =
             hasMore && last
@@ -315,5 +315,65 @@ export class ProductRepository {
                 hasMore
             }
         };
+    }
+
+    async findStoreProducts(
+        storeId: string,
+        limit: number,
+        cursor?: { date: Date; id: string },
+    ) {
+        return prisma.product.findMany({
+            where: {
+                storeId,
+                status: "active",
+                deletedAt: null,
+
+                ...(cursor && {
+                    OR: [
+                        {
+                            createdAt: {
+                                lt: cursor.date,
+                            },
+                        },
+                        {
+                            createdAt: cursor.date,
+                            id: {
+                                lt: cursor.id,
+                            },
+                        },
+                    ],
+                }),
+            },
+
+            select: {
+                id: true,
+                name: true,
+                brand: true,
+                price: true,
+                rating: true,
+                reviewsCount: true,
+                storeId: true,
+                categoryId: true,
+                status: true,
+                createdAt: true,
+                tags: true,
+                images: {
+                    where: {
+                        isDefault: true,
+                    },
+                    select: {
+                        url: true,
+                    },
+                    take: 1,
+                },
+            },
+
+            orderBy: [
+                { createdAt: "desc" },
+                { id: "desc" },
+            ],
+
+            take: limit + 1,
+        });
     }
 }

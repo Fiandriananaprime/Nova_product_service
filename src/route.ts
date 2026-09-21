@@ -6,6 +6,7 @@ import { ProductRoute } from "./routes/product.route.js";
 import { ReviewRepository } from "./repository/review.repository.js";
 import { ReviewService } from "./service/review.service.js";
 import { ReviewController } from "./controller/review.controller.js";
+import { StoreRoute } from "./routes/store.route.js";
 
 export const routes = (app: FastifyInstance) => {
     // Dependencies
@@ -21,5 +22,6 @@ export const routes = (app: FastifyInstance) => {
     const reviewController = new ReviewController(reviewService)
 
     ProductRoute(app,productController,reviewController,{prefix:"/api"})
+    StoreRoute(app,productController,{prefix:"/api"})
 
 };
