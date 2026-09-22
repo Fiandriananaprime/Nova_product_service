@@ -66,6 +66,40 @@ enum PromotionStatus {
   @@map("promotion_status")
 }
 
+enum ReviewStatus {
+  published
+  hidden
+  pending
+  rejected
+}
+
+model Review {
+  id              String       @id @default(uuid()) @db.Uuid
+  productId       String       @db.Uuid
+  productName     String
+  storeId         String       @db.Uuid
+  customerId      String       @db.Uuid
+  customerName    String
+  rating          Int
+  comment         String
+  date            DateTime     @default(now())
+  replied         Boolean      @default(false)
+  reply           String?
+  replyDate       DateTime?
+  productImage    String?
+  verifiedPurchase Boolean     @default(false)
+  helpfulCount    Int          @default(0)
+  status          ReviewStatus @default(pending)
+
+  @@unique([date, id])
+  @@index([productId, status, date(sort: Desc), id(sort: Desc)], map: "idx_reviews_product_status_date_id")
+  @@index([productId])
+  @@index([storeId])
+  @@index([customerId])
+  @@index([status])
+  @@index([date])
+}
+
 model Product {
   id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name              String
@@ -75,7 +109,9 @@ model Product {
   rating            Decimal       @default(0) @db.Decimal(3, 2)
   reviewsCount      Int           @default(0) @map("reviews_count")
   storeId           String        @map("store_id") @db.Uuid
+  storeName         String        @map("store_name")
   categoryId        String        @map("category_id") @db.Uuid
+  categoryName      String        @map("category_name")
   lowStockThreshold Int           @default(10) @map("low_stock_threshold")
   sku               String?
   tags              String[]      @default([])
@@ -99,6 +135,7 @@ model Product {
   featuredProduct   FeaturedProduct[]
 
   @@index([storeId, status, createdAt(sort: Desc)], map: "idx_products_store_status")
+  @@index([categoryId, status, deletedAt, createdAt(sort: Desc), id(sort: Desc)], map: "idx_products_related_cursor")
   @@index(categoryId, map: "idx_products_category")
   @@index(price, map: "idx_products_price")
   @@index(rating(sort: Desc), map: "idx_products_rating")
