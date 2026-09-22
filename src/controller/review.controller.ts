@@ -26,4 +26,18 @@ export class ReviewController {
         return reply.status(200).send(reviews)
     }
 
+    async findReviewsByStoreId(
+        request: FastifyRequest<{Params:{id:string}, Querystring:ReviewQuery}>,
+        reply: FastifyReply
+    ){
+        const storeId = request.params.id
+        const { limit: rawLimit, cursor, rating: rawRating} = request.query
+        const limit = rawLimit === undefined ? 20 : Number(rawLimit);
+        const rating = rawRating && rawRating !== "all" ? Number(rawRating) : undefined;
+
+        const reviews = await this.reviewService.findReviewsByStoreId(storeId,limit,cursor,rating as 1 | 2 | 3 | 4 | 5 | undefined);
+
+        return reply.status(200).send(reviews)
+    }
+
 }

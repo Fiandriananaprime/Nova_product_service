@@ -46,9 +46,10 @@ export class ProductController {
         const {limit: rawLimit, cursor} = request.query
         const limit = rawLimit === undefined ? 20 : Number(rawLimit);
 
-        const products = await this.productService.findRelatedProducts(storeId,limit,cursor);
+        const products = await this.productService.findProductsByStoreId(storeId,limit,cursor);
 
         return reply.status(200).send(products)
     }
 
+    
 }

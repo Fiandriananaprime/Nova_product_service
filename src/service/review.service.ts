@@ -78,4 +78,47 @@ export class ReviewService {
             counts: result.counts,
         };
     }
+
+    async findReviewsByStoreId(
+        storeId: string,
+        limit: number,
+        cursor?: string,
+        rating?: ReviewRating
+    ){
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+            throw new InvalidPaginationError("limit must be an integer between 1 and 100");
+        }
+
+        const decoded = cursor
+            ? this.decodeCursor(cursor)
+            : undefined;
+
+        const result = await this.reviewRepository.findStoreReviews(
+            storeId,
+            limit,
+            decoded && {
+                date: new Date(decoded.date),
+                id: decoded.id,
+            },
+            rating,
+        );
+
+        const last = result.data.at(-1);
+
+        return {
+            data: result.data,
+            meta: {
+                nextCursor:
+                    result.hasMore && last
+                        ? this.encodeCursor({
+                              date: last.date.toISOString(),
+                              id: last.id,
+                          })
+                        : null,
+                hasMore: result.hasMore,
+            },
+            counts: result.counts,
+        };
+        
+    }
 }

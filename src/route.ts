@@ -22,6 +22,6 @@ export const routes = (app: FastifyInstance) => {
     const reviewController = new ReviewController(reviewService)
 
     ProductRoute(app,productController,reviewController,{prefix:"/api"})
-    StoreRoute(app,productController,{prefix:"/api"})
+    StoreRoute(app,productController,reviewController,{prefix:"/api"})
 
 };
