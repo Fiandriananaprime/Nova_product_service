@@ -8,9 +8,12 @@ import { routes } from "./route.js"
 
 import { prisma } from "./database/prisma.js";
 import { AppError } from "./errorHandler/AppError.js";
+import { userContext } from "./middleware/userContext.js";
 
 
 export const app = Fastify();
+
+app.addHook("preHandler", userContext);
 
 registerHealth(app);
 
