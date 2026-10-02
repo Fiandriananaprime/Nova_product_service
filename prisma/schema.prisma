@@ -100,6 +100,29 @@ model Review {
   @@index([date])
 }
 
+enum ReviewEligibilityStatus {
+  AVAILABLE
+  USED
+}
+
+model ReviewEligibility {
+  id           String                   @id @default(uuid()) @db.Uuid
+  userId       String                   @db.Uuid
+  orderId      String                   @db.Uuid
+  orderItemId  String                   @unique @db.Uuid
+  productId    String                   @db.Uuid
+
+  status       ReviewEligibilityStatus  @default(AVAILABLE)
+  reviewId     String?                  @unique @db.Uuid
+
+  createdAt    DateTime                 @default(now())
+  usedAt       DateTime?
+
+  @@index([userId, productId])
+  @@index([userId, status])
+  @@index([productId, status])
+}
+
 model Product {
   id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name              String

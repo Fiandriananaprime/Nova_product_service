@@ -58,16 +58,32 @@ export class ReviewService {
             throw new AppError("VALIDATION_ERROR", 400, "Rating must be an integer between 1 and 5");
         }
 
-        const review = await this.reviewRepository.createProductReview(
+        const result = await this.reviewRepository.createProductReview(
             productId,
             customerId,
             input.rating,
             comment,
         );
 
-        if (!review) throw new ProductNotFoundError();
+        if (!result) throw new ProductNotFoundError();
+        if (!result.eligible) {
+            throw new AppError(
+                "REVIEW_NOT_ELIGIBLE",
+                403,
+                "A delivered purchase is required to review this product",
+            );
+        }
 
-        return review;
+        return result.review;
+    }
+
+    async createReviewEligibility(input: {
+        userId: string;
+        orderId: string;
+        orderItemId: string;
+        productId: string;
+    }) {
+        return this.reviewRepository.createReviewEligibility(input);
     }
 
     async getProductReviews(
@@ -154,4 +170,5 @@ export class ReviewService {
         };
         
     }
+
 }

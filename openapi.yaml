@@ -70,7 +70,7 @@ paths:
       tags: [Reviews]
       operationId: createProductReview
       summary: Submit a product review for moderation
-      description: Reviews are stored as pending and unverified until purchase verification is integrated.
+      description: Reviews are stored as pending after a matching order.delivered event verifies the purchase.
       parameters:
         - name: id
           in: path
@@ -95,6 +95,7 @@ paths:
         '201': { description: Review accepted for moderation }
         '400': { description: Invalid review input }
         '401': { description: User identity is missing }
+        '403': { description: No delivered purchase eligibility exists for this user and product }
         '404': { description: Active product not found }
 
   /products:
