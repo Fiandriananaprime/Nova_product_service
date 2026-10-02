@@ -15,3 +15,8 @@ export type Review = {
     helpfulCount: number;
     status: "published" | "hidden" | "pending" | "rejected";
 };
+
+export type CreateReviewInput = {
+    rating: number;
+    comment: string;
+};

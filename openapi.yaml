@@ -65,6 +65,38 @@ paths:
               schema:
                 type: string
 
+  /api/products/{id}/reviews:
+    post:
+      tags: [Reviews]
+      operationId: createProductReview
+      summary: Submit a product review for moderation
+      description: Reviews are stored as pending and unverified until purchase verification is integrated.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: x-user-id
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating, comment]
+              additionalProperties: false
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string, minLength: 1 }
+      responses:
+        '201': { description: Review accepted for moderation }
+        '400': { description: Invalid review input }
+        '401': { description: User identity is missing }
+        '404': { description: Active product not found }
+
   /products:
     get:
       tags:

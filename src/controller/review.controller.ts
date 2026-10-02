@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { ReviewService } from "../service/review.service.js";
+import type { CreateReviewInput } from "../types/review.js";
 
 type ReviewQuery = {
     limit?: number;
@@ -11,6 +12,19 @@ export class ReviewController {
     constructor (
         private readonly reviewService: ReviewService
     ){}
+
+    async createProductReview(
+        request: FastifyRequest<{ Params: { id: string }; Body: CreateReviewInput }>,
+        reply: FastifyReply,
+    ) {
+        const review = await this.reviewService.createProductReview(
+            request.params.id,
+            request.userId,
+            request.body,
+        );
+
+        return reply.status(201).send(review);
+    }
 
     async getProductReviews(
         request: FastifyRequest<{Params:{id:string}, Querystring:ReviewQuery}>,

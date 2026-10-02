@@ -1,5 +1,8 @@
 import type { ReviewRepository } from "../repository/review.repository.js";
+import { ProductNotFoundError } from "../errorHandler/ProductError.js";
+import { AppError } from "../errorHandler/AppError.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
+import type { CreateReviewInput } from "../types/review.js";
 
 type Cursor = {
     date: string;
@@ -35,6 +38,36 @@ export class ReviewService {
         } catch {
             throw new InvalidPaginationError("Invalid reviews cursor");
         }
+    }
+
+    async createProductReview(
+        productId: string,
+        customerId: string | null,
+        input: CreateReviewInput,
+    ) {
+        if (!customerId) {
+            throw new AppError("UNAUTHORIZED", 401, "Authentication required");
+        }
+
+        const comment = input.comment.trim();
+        if (!comment) {
+            throw new AppError("VALIDATION_ERROR", 400, "Review comment cannot be empty");
+        }
+
+        if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5) {
+            throw new AppError("VALIDATION_ERROR", 400, "Rating must be an integer between 1 and 5");
+        }
+
+        const review = await this.reviewRepository.createProductReview(
+            productId,
+            customerId,
+            input.rating,
+            comment,
+        );
+
+        if (!review) throw new ProductNotFoundError();
+
+        return review;
     }
 
     async getProductReviews(

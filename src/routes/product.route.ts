@@ -14,5 +14,22 @@ export const ProductRoute = (
         route.get<{Params:{id: string}}>("/products/:id",productController.findProductById.bind(productController))
         route.get<{Params:{id:string};Querystring:{limit?: number, cursor?: string}}>("/products/:id/related",productController.findRelatedProducts.bind(productController))
         route.get<{Params:{id:string}; Querystring:{limit?: number, cursor?: string}}>("/products/:id/reviews",reviewController.getProductReviews.bind(reviewController))
+        route.post<{Params:{id:string}; Body:{rating:number;comment:string}}>(
+            "/products/:id/reviews",
+            {
+                schema: {
+                    body: {
+                        type: "object",
+                        required: ["rating", "comment"],
+                        additionalProperties: false,
+                        properties: {
+                            rating: { type: "integer", minimum: 1, maximum: 5 },
+                            comment: { type: "string", minLength: 1 },
+                        },
+                    },
+                },
+            },
+            reviewController.createProductReview.bind(reviewController),
+        )
     },option)
 }

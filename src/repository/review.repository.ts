@@ -1,6 +1,48 @@
 import { prisma } from "../database/prisma.js";
 
 export class ReviewRepository {
+    async createProductReview(
+        productId: string,
+        customerId: string,
+        rating: number,
+        comment: string,
+    ) {
+        const product = await prisma.product.findFirst({
+            where: {
+                id: productId,
+                status: "active",
+                deletedAt: null,
+            },
+            select: {
+                id: true,
+                name: true,
+                storeId: true,
+                images: {
+                    where: { isDefault: true },
+                    select: { url: true },
+                    take: 1,
+                },
+            },
+        });
+
+        if (!product) return null;
+
+        return prisma.review.create({
+            data: {
+                productId: product.id,
+                productName: product.name,
+                storeId: product.storeId,
+                customerId,
+                customerName: "Customer",
+                rating,
+                comment,
+                productImage: product.images[0]?.url ?? null,
+                verifiedPurchase: false,
+                status: "pending",
+            },
+        });
+    }
+
     async findReviews(
         productId: string,
         limit: number,
@@ -134,4 +176,5 @@ export class ReviewRepository {
             counts,
         };
     }
+    
 }
