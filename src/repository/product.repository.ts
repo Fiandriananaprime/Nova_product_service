@@ -102,7 +102,6 @@ export class ProductRepository {
             price: product.price.toNumber(),
             rating: product.rating.toNumber(),
             reviewsCount: product.reviewsCount,
-            storeId: product.storeId,
             categoryId: product.categoryId,
             status: product.status,
             moderationStatus: product.moderationStatus,

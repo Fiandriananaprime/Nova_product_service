@@ -46,7 +46,6 @@ export type ProductStoreSummary = {
     price: number;
     rating: number;
     reviewsCount: number;
-    storeId: string;
     categoryId: string;
     status: ProductStatus;
     moderationStatus: ProductModerationStatus;
