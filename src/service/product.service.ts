@@ -1,4 +1,6 @@
 import { getRelatedCategoryIds } from "../client/grpc/store.client.js";
+import { getCategorySpecs as getCategorySpecsFromStore } from "../client/grpc/category-spec.client.js";
+import type { CategorySpec } from "../client/grpc/category-spec.client.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
 import { ProductNotFoundError } from "../errorHandler/ProductError.js";
 import type { ProductRepository } from "../repository/product.repository.js";
@@ -8,6 +10,10 @@ export class ProductService {
     constructor(
         private readonly productRepository : ProductRepository
     ){}
+
+    async getCategorySpecs(categoryId: string): Promise<CategorySpec[]> {
+        return getCategorySpecsFromStore(categoryId);
+    }
 
     async findProducts( params: GetProductQueryParam){
         return this.productRepository.findProducts(params)
