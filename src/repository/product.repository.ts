@@ -1,7 +1,7 @@
 import { prisma } from "../database/prisma.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
 import type { Prisma } from "../generated/prisma/index.js";
-import type { GetProductQueryParam, Product, ProductBuyer, ProductInput, ProductSpecs, ProductSummary, ProductVariant } from "../types/product.js";
+import type { GetProductQueryParam, ProductBuyer, ProductInput, ProductSpecs, ProductSummary, ProductVariant } from "../types/product.js";
 
 export class ProductRepository {
 
