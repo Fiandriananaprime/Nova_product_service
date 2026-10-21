@@ -59,7 +59,7 @@ const getClient = async (): Promise<CategorySpecClient> => {
                     credentials: grpc.ChannelCredentials,
                 ) => CategorySpecClient;
             };
-            const address = process.env["STORE_GRPC_ADDRESS"] ?? "nova-store-service:50051";
+            const address = process.env["STORE_GRPC_ADDRESS"] || "nova-store-service:50051";
 
             return new categorySpecPackage.CategorySpecService(
                 address,
