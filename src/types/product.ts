@@ -1,6 +1,7 @@
 import type { ProductSpecs, ProductVariant } from "@Fiandriananaprime/nova_api_type";
+import type { InputJsonValue, JsonValue } from "@prisma/client/runtime/client";
 
-export type { Product,ProductSpecs,ProductVariant } from "@Fiandriananaprime/nova_api_type"
+export type { ProductSpecs,ProductVariant } from "@Fiandriananaprime/nova_api_type"
 
 export type GetProductQueryParam = {
     search?: string,
@@ -30,7 +31,40 @@ export type ProductSummary = {
     tags: string[];
 };
 
+export type ProductModerationStatus = "draft" | "pending" | "approved" | "rejected";
 
+export interface Product {
+  id: string;
+  name: string;
+  brand: string | null;
+  description: string;
+  price: number;
+  rating: number;
+  reviewsCount: number;
+  storeId: string;
+  storeName: string;
+  categoryId: string;
+  categoryName: string;
+  lowStockThreshold: number;
+  images: ProductImage[];
+  stock: number;
+  sku: string | null;
+  tags: string[];
+  specs: JsonValue;
+  variants?: ProductVariant[] | null;
+  status: ProductStatus;
+  moderationStatus: ProductModerationStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  views: number;
+  soldCount: number;
+  wishlistCount: number;
+}
+
+export interface ProductImage {
+  url: string;
+  isDefault: boolean;
+}
 
 export interface ProductBuyer {
     id: string;
@@ -53,4 +87,25 @@ export interface ProductBuyer {
     specs: ProductSpecs;
     variants: ProductVariant[];
     createdAt: Date;
+}
+
+export interface ProductInput {
+  name: string;
+  storeName: string;
+  categoryName: string;
+  description?: string;
+  brand?: string | null;
+  categoryId: string;
+  tags?: string[];
+  images?: ProductImageInput[];
+  price: number;
+  stock: number;
+  specs: InputJsonValue;
+  variants?: ProductVariant[];
+  status?: ProductStatus;
+}
+
+export interface ProductImageInput {
+  url: string;
+  isDefault: boolean;
 }

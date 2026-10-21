@@ -4,11 +4,14 @@ import type { CategorySpec } from "../client/grpc/category-spec.client.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
 import { ProductNotFoundError } from "../errorHandler/ProductError.js";
 import type { ProductRepository } from "../repository/product.repository.js";
-import type { GetProductQueryParam } from "../types/product.js";
+import type { GetProductQueryParam, Product, ProductInput } from "../types/product.js";
+import type { InventoryRepository } from "../repository/Inventory.repository.js";
+import { parseProductVariants, validateProductSpecs } from "./validation.js";
 
 export class ProductService {
     constructor(
-        private readonly productRepository : ProductRepository
+        private readonly productRepository : ProductRepository,
+        private readonly inventoryRepository: InventoryRepository
     ){}
 
     async getCategorySpecs(categoryId: string): Promise<CategorySpec[]> {
@@ -25,6 +28,23 @@ export class ProductService {
         return products;
     }
 
+    async createDraftProduct(sellerId: string, data: ProductInput): Promise<Product> {
+        const productSpecs = await this.getCategorySpecs(data.categoryId);
+
+        const validatedSpecs = validateProductSpecs(productSpecs, data.specs);
+        const inventory = await this.inventoryRepository.initializeProductInventory(sellerId);
+        const product = await this.productRepository.createProduct(
+            sellerId, { ...data, specs: validatedSpecs });
+
+        return {
+            ...product,
+            price: Number(product.price),
+            rating: Number(product.rating),
+            stock: inventory.stock,
+            variants: parseProductVariants(product.variants),
+        };
+    }
+    
     async findProductById(id: string){
         const product = await this.productRepository.findProductById(id);
 

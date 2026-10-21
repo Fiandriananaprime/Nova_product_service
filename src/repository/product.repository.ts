@@ -1,7 +1,7 @@
 import { prisma } from "../database/prisma.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
 import type { Prisma } from "../generated/prisma/index.js";
-import type { GetProductQueryParam, ProductBuyer, ProductSpecs, ProductSummary, ProductVariant } from "../types/product.js";
+import type { GetProductQueryParam, Product, ProductBuyer, ProductInput, ProductSpecs, ProductSummary, ProductVariant } from "../types/product.js";
 
 export class ProductRepository {
 
@@ -54,6 +54,24 @@ export class ProductRepository {
         });
     }
     
+    async createProduct(storeId: string, data: ProductInput) {
+        const product = await prisma.product.create({
+            data: {
+                ...data,
+                storeId,
+                images: {
+                    create: data.images?.map(({ url, isDefault }) => ({
+                        url,
+                        isDefault,
+                    })) || [],
+                },
+            },
+            include: {
+                images: true,
+            },
+        });
+        return product;
+    }
     async findProducts(params: GetProductQueryParam) {
         const {
             search = "",
