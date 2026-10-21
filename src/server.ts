@@ -5,6 +5,7 @@ import { ReviewRepository } from "./repository/review.repository.js";
 import { ReviewService } from "./service/review.service.js";
 import { RabbitMQClient } from "./infrastructure/rabbitmq/RabbitClient.js";
 import { OrderDeliveredConsumer } from "./infrastructure/rabbitmq/consumer/OrderDeliverd.js";
+import { startGrpcServer } from "./grpc/server.js";
 
 const PORT = Number(process.env["PORT"]) || 3001;
 
@@ -15,6 +16,7 @@ const start = async () => {
     }
     const exchange = process.env["RABBITMQ_EXCHANGE"] ?? "nova.events";
     const rabbitClient = new RabbitMQClient(rabbitUrl);
+    let grpcServer: Awaited<ReturnType<typeof startGrpcServer>> | undefined;
 
     try {
        await rabbitClient.connect();
@@ -26,6 +28,16 @@ const start = async () => {
        );
        await orderDeliveredConsumer.start();
        app.addHook("onClose", async () => rabbitClient.close());
+       grpcServer = await startGrpcServer();
+       app.addHook("onClose", async () => {
+            if (!grpcServer) return;
+            await new Promise<void>((resolve, reject) => {
+                grpcServer?.tryShutdown((error) => {
+                    if (error) reject(error);
+                    else resolve();
+                });
+            });
+       });
 
        const address =  await app.listen({
             port: PORT,
@@ -35,6 +47,14 @@ const start = async () => {
         console.log("Service running at: " + address)
     } catch (error) {
         await rabbitClient.close();
+        if (grpcServer) {
+            await new Promise<void>((resolve, reject) => {
+                grpcServer?.tryShutdown((shutdownError) => {
+                    if (shutdownError) reject(shutdownError);
+                    else resolve();
+                });
+            });
+        }
         console.error(`Service failed to start on port ${PORT}:`, error);
         app.log.error(error);
         process.exit(1);

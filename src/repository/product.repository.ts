@@ -4,6 +4,55 @@ import type { Prisma } from "../generated/prisma/index.js";
 import type { GetProductQueryParam, ProductBuyer, ProductSpecs, ProductSummary, ProductVariant } from "../types/product.js";
 
 export class ProductRepository {
+
+    async getProductsForGrpc(productIds: string[]) {
+        if (productIds.length === 0) return [];
+
+        const products = await prisma.product.findMany({
+            where: {
+                id: { in: productIds },
+                deletedAt: null,
+            },
+            select: {
+                id: true,
+                name: true,
+                price: true,
+                rating: true,
+                reviewsCount: true,
+                storeId: true,
+                storeName: true,
+                images: {
+                    where: { isDefault: true },
+                    orderBy: { sortOrder: "asc" },
+                    select: { url: true },
+                    take: 1,
+                },
+                inventory: {
+                    select: { stock: true },
+                },
+            },
+        });
+
+        const productsById = new Map(products.map((product) => [product.id, product]));
+        return productIds.flatMap((productId) => {
+            const product = productsById.get(productId);
+            if (!product) return [];
+
+            return [{
+                productId: product.id,
+                name: product.name,
+                image: product.images[0]?.url ?? "",
+                price: Number(product.price),
+                sellerId: product.storeId,
+                sellerName: product.storeName,
+                stock: product.inventory?.stock ?? 0,
+                rating: Number(product.rating),
+                reviewCount: product.reviewsCount,
+                storeId: product.storeId,
+                storeName: product.storeName,
+            }];
+        });
+    }
     
     async findProducts(params: GetProductQueryParam) {
         const {
