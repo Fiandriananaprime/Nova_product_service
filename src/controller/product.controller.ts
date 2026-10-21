@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { ProductService } from "../service/product.service.js";
-import type { GetProductQueryParam, ProductInput } from "../types/product.js";
+import type { GetProductQueryParam } from "../types/product.js";
 
 export class ProductController {
     constructor (
