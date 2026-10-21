@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { ProductInput } from "../types/product.js";
+import type { GetProductStoreQueryParam, ProductInput } from "../types/product.js";
 import type { SellerController } from "../controller/seller.controller.js";
 import { registerProductSchemas } from "../schema/ProductInput.js";
 
@@ -10,6 +10,7 @@ export const SellerRoutes = async (
 ) => {
     await registerProductSchemas(app);
     app.register((route) => {
+        route.get<{Querystring: GetProductStoreQueryParam}>("/products",sellerController.getProductsBySellerId.bind(sellerController))
         route.post<{Body:ProductInput}>("/products",{schema:{body: { $ref: "ProductInput#" }}},sellerController.createProduct.bind(sellerController))
     },option)
 }

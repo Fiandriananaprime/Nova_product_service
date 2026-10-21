@@ -16,6 +16,14 @@ export type GetProductQueryParam = {
 }
 export type ProductStatus = "active" | "inactive"
 
+export type GetProductStoreQueryParam = {
+    search?: string,
+    page?: number,
+    limit?: number,
+    categoryId?: string,
+    status: ProductStatus 
+    moderationStatus: ProductModerationStatus,
+}
 export type ProductSummary = {
     id: string;
     name: string;
@@ -26,6 +34,22 @@ export type ProductSummary = {
     storeId: string;
     categoryId: string;
     status: ProductStatus;
+    images: string | null;
+    createdAt: string;
+    tags: string[];
+};
+
+export type ProductStoreSummary = {
+    id: string;
+    name: string;
+    brand: string | null;
+    price: number;
+    rating: number;
+    reviewsCount: number;
+    storeId: string;
+    categoryId: string;
+    status: ProductStatus;
+    moderationStatus: ProductModerationStatus;
     images: string | null;
     createdAt: string;
     tags: string[];

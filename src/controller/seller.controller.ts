@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { ProductService } from "../service/product.service.js";
-import type { ProductInput } from "../types/product.js";
+import type { GetProductStoreQueryParam, ProductInput } from "../types/product.js";
 import { ForbiddenError } from "../errorHandler/InvalidCredentials.js";
 
 export class SellerController {
@@ -8,6 +8,14 @@ export class SellerController {
 
     constructor(ps:ProductService){
         this.productService=ps
+    }
+
+    async getProductsBySellerId(request: FastifyRequest<{Querystring: GetProductStoreQueryParam}>, reply: FastifyReply) {
+        const storeId = request.headers["x-store-id"];
+        if(!storeId || typeof storeId !== "string") throw new ForbiddenError("Must have SellerRole");
+
+        const products = await this.productService.getProductsBySellerId(storeId, request.query);
+        return reply.status(200).send(products);
     }
 
     async createProduct( request: FastifyRequest<{Body:ProductInput}>,reply: FastifyReply){

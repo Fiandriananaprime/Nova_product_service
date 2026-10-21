@@ -1,7 +1,7 @@
 import { prisma } from "../database/prisma.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
 import type { Prisma } from "../generated/prisma/index.js";
-import type { GetProductQueryParam, ProductBuyer, ProductInput, ProductSpecs, ProductSummary, ProductVariant } from "../types/product.js";
+import type { GetProductQueryParam, GetProductStoreQueryParam, ProductBuyer, ProductInput, ProductSpecs, ProductStoreSummary, ProductSummary, ProductVariant } from "../types/product.js";
 
 export class ProductRepository {
 
@@ -54,6 +54,66 @@ export class ProductRepository {
         });
     }
     
+    async getProductsBySellerId( sellerId: string,params: GetProductStoreQueryParam,): Promise<{
+        data: ProductStoreSummary[];
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+    }> {
+        const { search = "", page = 1, limit = 20, status, moderationStatus, categoryId } = params;
+        const term = search.trim();
+
+        const where: Prisma.ProductWhereInput = {
+            storeId: sellerId,
+            deletedAt: null,
+            ...(status && { status }),
+            ...(moderationStatus && { moderationStatus }),
+            ...(categoryId && { categoryId }),
+            ...(term && {
+            OR: [
+                { name: { contains: term, mode: "insensitive" } },
+                { brand: { contains: term, mode: "insensitive" } },
+                { description: { contains: term, mode: "insensitive" } },
+                { sku: { contains: term, mode: "insensitive" } },
+                { categoryName: { contains: term, mode: "insensitive" } },
+                { tags: { has: term } },
+            ],
+            }),
+        };
+
+        const [products, total] = await prisma.$transaction([
+            prisma.product.findMany({
+            where,
+            skip: (page - 1) * limit,
+            take: limit,
+            orderBy: { createdAt: "desc" },
+            include: {
+                images: {
+                orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }],
+                },
+            },
+            }),
+            prisma.product.count({ where }),
+        ]);
+
+        return {
+            data: products.map((product): ProductStoreSummary => ({
+            id: product.id,
+            name: product.name,
+            brand: product.brand,
+            price: product.price.toNumber(),
+            rating: product.rating.toNumber(),
+            reviewsCount: product.reviewsCount,
+            storeId: product.storeId,
+            categoryId: product.categoryId,
+            status: product.status,
+            moderationStatus: product.moderationStatus,
+            images: product.images.find((image) => image.isDefault)?.url ?? product.images[0]?.url ?? null,
+            createdAt: product.createdAt.toISOString(),
+            tags: product.tags,
+            })),
+            pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        };
+    }
+
     async createProduct(storeId: string, data: ProductInput) {
         const product = await prisma.product.create({
             data: {

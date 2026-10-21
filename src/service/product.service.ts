@@ -4,7 +4,7 @@ import type { CategorySpec } from "../client/grpc/category-spec.client.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
 import { ProductNotFoundError } from "../errorHandler/ProductError.js";
 import type { ProductRepository } from "../repository/product.repository.js";
-import type { GetProductQueryParam, Product, ProductInput } from "../types/product.js";
+import type { GetProductQueryParam, GetProductStoreQueryParam, Product, ProductInput, ProductStoreSummary } from "../types/product.js";
 import type { InventoryRepository } from "../repository/Inventory.repository.js";
 import { parseProductVariants, validateProductSpecs } from "./validation.js";
 
@@ -20,6 +20,13 @@ export class ProductService {
 
     async findProducts( params: GetProductQueryParam){
         return this.productRepository.findProducts(params)
+    }
+
+    async getProductsBySellerId(sellerId: string, params: GetProductStoreQueryParam): Promise<{
+        data: ProductStoreSummary[];
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+    }> {
+        return this.productRepository.getProductsBySellerId(sellerId, params);
     }
 
     async getFeaturedProducts() {
@@ -44,7 +51,7 @@ export class ProductService {
             variants: parseProductVariants(product.variants),
         };
     }
-    
+
     async findProductById(id: string){
         const product = await this.productRepository.findProductById(id);
 
