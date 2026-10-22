@@ -1,6 +1,7 @@
 import { prisma } from "../database/prisma.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
 import { ProductModerationError } from "../errorHandler/ProductError.js";
+import { ProductImageError } from "../errorHandler/ProductImageError.js";
 import type { Prisma } from "../generated/prisma/index.js";
 import type { GetProductQueryParam, GetProductStoreQueryParam, Product, ProductBuyer, ProductInput, ProductModerationStatus, ProductSpecs, ProductStoreSummary, ProductSummary, ProductVariant } from "../types/product.js";
 
@@ -16,7 +17,7 @@ export class ProductRepository {
 
             const currentImageCount = await tx.productImage.count({ where: { productId } });
             if (currentImageCount >= 10) {
-                throw new Error("A product can have at most 10 images");
+                throw new ProductImageError("A product can have at most 10 images", 400);
             }
 
             if (isDefault) {
