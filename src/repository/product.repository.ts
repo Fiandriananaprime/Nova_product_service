@@ -188,8 +188,8 @@ export class ProductRepository {
                 id,
                 storeId,
                 images: {
-                    create: images?.map(({ url, isDefault }) => ({
-                        url,
+                    create: images?.map(({ path, isDefault }) => ({
+                        path,
                         isDefault,
                     })) ?? [],
                 },
@@ -287,7 +287,7 @@ export class ProductRepository {
                             isDefault: true
                         },
                         select: {
-                            url: true
+                            path: true
                         },
                         take: 1
                     }
@@ -376,7 +376,7 @@ export class ProductRepository {
             storeId: product.storeId,
             categoryId: product.categoryId,
             status: product.status,
-            images: product.images[0]?.url ?? null,
+            images: product.images[0]?.path ?? null,
             createdAt: product.createdAt.toISOString(),
             tags: product.tags,
         }));
@@ -552,7 +552,7 @@ export class ProductRepository {
                 ...p,
                 price: Number(p.price),
                 rating: Number(p.rating),
-                images: p.images[0]?.url ?? null,
+                images: p.images[0]?.path ?? null,
                 createdAt: p.createdAt.toISOString()
             })),
             meta: {
