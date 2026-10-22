@@ -11,7 +11,7 @@ export const SellerRoutes = async (
     await registerProductSchemas(app);
     app.register((route) => {
         route.get<{Querystring: GetProductStoreQueryParam}>("/products",sellerController.getProductsBySellerId.bind(sellerController))
-        route.post<{Params: {productId: string}; Body: {url: string; isDefault?: boolean}}>(
+        route.post<{Params: {productId: string}; Body: {path: string; isDefault?: boolean}}>(
             "/products/:productId/images",
             sellerController.uploadProductImage.bind(sellerController),
         )
