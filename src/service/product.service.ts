@@ -231,6 +231,34 @@ export class ProductService {
         };;
     }
 
+    async addProductImage(productId: string, storeId: string, url: string, isDefault: boolean) {
+        let parsedUrl: URL;
+        try {
+            parsedUrl = new URL(url);
+        } catch {
+            throw new Error("Invalid Firebase Storage URL");
+        }
+
+        const allowedHosts = new Set(["firebasestorage.googleapis.com", "storage.googleapis.com"]);
+        if (parsedUrl.protocol !== "https:" || !allowedHosts.has(parsedUrl.hostname)) {
+            throw new Error("Image URL must point to Firebase Storage");
+        }
+
+        // Verify that the uploaded object is publicly/token accessible before storing its URL.
+        const response = await fetch(parsedUrl, { method: "HEAD", signal: AbortSignal.timeout(5000) });
+        if (!response.ok) {
+            throw new Error("Firebase Storage image does not exist or is not accessible");
+        }
+        const contentType = response.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
+        if (!contentType?.startsWith("image/")) {
+            throw new Error("Firebase Storage object is not an image");
+        }
+
+        const image = await this.productRepository.createProductImage(productId, storeId, url, isDefault);
+        if (!image) throw new ProductNotFoundError();
+        return image;
+    }
+
     async deleteProduct(productId: string,storeId: string) {
         const product = await this.productRepository.findProductById(productId, "SELLER", storeId);
         if (!product) throw new ProductNotFoundError();
