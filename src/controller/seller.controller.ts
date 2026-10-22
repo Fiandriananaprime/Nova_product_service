@@ -73,6 +73,29 @@ export class SellerController {
         return reply.status(201).send(product);
     }
 
+    async uploadProductImage(
+        request: FastifyRequest<{ Params: { productId: string }; Body: { url: string; isDefault?: boolean } }>,
+        reply: FastifyReply,
+    ) {
+        const storeId = request.headers["x-store-id"];
+        if (!storeId || request.role !== "SELLER" || typeof storeId !== "string") {
+            throw new ForbiddenError("Must have SellerRole");
+        }
+
+        const { url, isDefault = false } = request.body ?? {};
+        if (typeof url !== "string" || typeof isDefault !== "boolean") {
+            return reply.status(400).send({ error: { code: "INVALID_IMAGE", message: "url and optional isDefault are required" } });
+        }
+
+        const image = await this.productService.addProductImage(
+            request.params.productId,
+            storeId,
+            url,
+            isDefault,
+        );
+        return reply.status(201).send(image);
+    }
+
     async deleteProduct(request: FastifyRequest<{Params: {productId: string}}>, reply: FastifyReply){
         const storeId = request.headers["x-store-id"];
         const userRole = request.role;
