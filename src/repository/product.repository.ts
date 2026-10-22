@@ -6,6 +6,37 @@ import type { GetProductQueryParam, GetProductStoreQueryParam, Product, ProductB
 
 export class ProductRepository {
 
+    async createProductImage(productId: string, storeId: string, url: string, isDefault: boolean) {
+        return prisma.$transaction(async (tx) => {
+            const product = await tx.product.findFirst({
+                where: { id: productId, storeId, deletedAt: null },
+                select: { id: true },
+            });
+            if (!product) return null;
+
+            const currentImageCount = await tx.productImage.count({ where: { productId } });
+            if (currentImageCount >= 10) {
+                throw new Error("A product can have at most 10 images");
+            }
+
+            if (isDefault) {
+                await tx.productImage.updateMany({
+                    where: { productId, isDefault: true },
+                    data: { isDefault: false },
+                });
+            }
+
+            return tx.productImage.create({
+                data: {
+                    productId,
+                    url,
+                    isDefault: isDefault || currentImageCount === 0,
+                    sortOrder: currentImageCount,
+                },
+            });
+        });
+    }
+
     async findProductByIdAndStoreId(productId:string, storeId: string){
         const product = await prisma.product.findUnique({
             where:{id:productId,storeId}
