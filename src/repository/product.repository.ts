@@ -2,7 +2,7 @@ import { prisma } from "../database/prisma.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
 import { ProductModerationError } from "../errorHandler/ProductError.js";
 import type { Prisma } from "../generated/prisma/index.js";
-import type { GetProductQueryParam, GetProductStoreQueryParam, ProductBuyer, ProductInput, ProductModerationStatus, ProductSpecs, ProductStoreSummary, ProductSummary, ProductVariant } from "../types/product.js";
+import type { GetProductQueryParam, GetProductStoreQueryParam, Product, ProductBuyer, ProductInput, ProductModerationStatus, ProductSpecs, ProductStoreSummary, ProductSummary, ProductVariant } from "../types/product.js";
 
 export class ProductRepository {
 
@@ -354,13 +354,52 @@ export class ProductRepository {
         };
     }
 
-    async findProductById(id: string): Promise<ProductBuyer | null>{
+    async findProductById(id: string, role: "SELLER" | "BUYER", storeId?: string): Promise< Product | ProductBuyer | null>{
         const product = await prisma.product.findUnique({
             where: {id},
             include:{images:true}
         })
         if(!product) return null
 
+        if(role === "SELLER" && storeId){
+            if(product.storeId !== storeId) return null
+
+            const stock = await prisma.inventory.findUnique({
+                where:{productId:id},
+                select:{stock:true}
+            })
+            const productSeller: Product = {
+                id: product.id,
+                name: product.name,
+                brand: product.brand,
+                description: product.description,
+                price: Number(product.price),
+                rating: Number(product.rating),
+                reviewsCount: product.reviewsCount,
+                storeId: product.storeId,
+                storeName: product.storeName,
+                categoryId: product.categoryId,
+                categoryName: product.categoryName,
+                lowStockThreshold: product.lowStockThreshold,
+                stock: stock?.stock ?? 0,
+                images: product.images.map(image => ({
+                    url: image.url,
+                    isDefault: image.isDefault
+                })),
+                sku: product.sku,
+                tags: product.tags,
+                specs: product.specs as ProductSpecs,
+                variants: product.variants as ProductVariant[],
+                status: product.status,
+                moderationStatus: product.moderationStatus,
+                createdAt: product.createdAt,
+                updatedAt: product.updatedAt,
+                views: product.views,
+                soldCount: product.soldCount,
+                wishlistCount: product.wishlistCount
+            }
+            return productSeller
+        }
         return {
             id: product.id,
             name: product.name,

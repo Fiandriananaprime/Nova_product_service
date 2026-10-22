@@ -10,6 +10,15 @@ export class SellerController {
         this.productService=ps
     }
 
+    async getProductById(request: FastifyRequest<{Params: {productId: string}}>, reply: FastifyReply){
+        const productId = request.params.productId;
+        const storeId = request.headers["x-store-id"];
+        const userRole = request.role;
+        if(!storeId || userRole != "SELLER" || typeof storeId !== "string") throw new ForbiddenError("Must have SellerRole");
+        const product = await this.productService.findProductById(productId, "SELLER", storeId);
+        return reply.status(200).send(product);
+    }
+
     async getProductsBySellerId(request: FastifyRequest<{Querystring: GetProductStoreQueryParam}>, reply: FastifyReply) {
         const storeId = request.headers["x-store-id"];
         const userRole = request.role
@@ -70,7 +79,7 @@ export class SellerController {
         const sellerId= request.userId;
         const productId= request.params.productId;
         if(!storeId || userRole != "SELLER" || !sellerId || typeof storeId !== "string") throw new ForbiddenError("User dont have permission to access this ressources");
-        await this.productService.deleteProduct(productId);
+        await this.productService.deleteProduct(productId,storeId);
         return reply.status(204).send({message:"Product successfully deleted"});
     }
 }

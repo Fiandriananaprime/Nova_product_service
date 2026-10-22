@@ -4,9 +4,10 @@ import type { CategorySpec } from "../client/grpc/category-spec.client.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
 import { ProductModerationError, ProductNotFoundError } from "../errorHandler/ProductError.js";
 import type { ProductRepository } from "../repository/product.repository.js";
-import type { GetProductQueryParam, GetProductStoreQueryParam, Product, ProductInput, ProductStoreSummary } from "../types/product.js";
+import type { GetProductQueryParam, GetProductStoreQueryParam, Product, ProductBuyer, ProductInput, ProductStoreSummary } from "../types/product.js";
 import type { InventoryRepository } from "../repository/Inventory.repository.js";
 import { parseProductVariants, validateProductSpecs } from "./validation.js";
+import { ForbiddenError } from "../errorHandler/InvalidCredentials.js";
 
 export class ProductService {
     constructor(
@@ -73,10 +74,14 @@ export class ProductService {
         };
     }
 
-    async findProductById(id: string){
-        const product = await this.productRepository.findProductById(id);
+    async findProductById(id: string, role: "SELLER" | "BUYER", storeId?: string): Promise<Product | ProductBuyer> {
+        const product = await this.productRepository.findProductById(id, role, storeId);
 
         if(!product) throw new ProductNotFoundError()
+
+        if(role === "SELLER" && storeId){
+            if(product.storeId !== storeId) throw new ForbiddenError("Product does not belong to the specified store");
+        }
 
         return product
     }
@@ -90,7 +95,7 @@ export class ProductService {
             throw new InvalidPaginationError("limit must be an integer between 1 and 100");
         }
 
-        const product = await this.productRepository.findProductById(productId);
+        const product = await this.productRepository.findProductById(productId,"BUYER");
 
         if (!product)
             throw new Error("Product not found");
@@ -197,7 +202,7 @@ export class ProductService {
     }
 
     async duplicateProduct(productId: string, storeId: string) {
-        const product = await this.productRepository.findProductById(productId);
+        const product = await this.productRepository.findProductById(productId, "SELLER", storeId);
         if (!product) throw new ProductNotFoundError();
         const data : ProductInput = {
             name: product.name,
@@ -226,8 +231,8 @@ export class ProductService {
         };;
     }
 
-    async deleteProduct(productId: string) {
-        const product = await this.productRepository.findProductById(productId);
+    async deleteProduct(productId: string,storeId: string) {
+        const product = await this.productRepository.findProductById(productId, "SELLER", storeId);
         if (!product) throw new ProductNotFoundError();
         await this.productRepository.deleteProduct(productId);
     }
