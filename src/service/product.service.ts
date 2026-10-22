@@ -214,7 +214,7 @@ export class ProductService {
             tags: product.tags,
             price: product.price,
             stock: 0,
-            specs: product.specs,
+            specs: product.specs ?? {},
         };
         const productSpecs = await this.getCategorySpecs(data.categoryId);
 
