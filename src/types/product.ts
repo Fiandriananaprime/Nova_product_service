@@ -85,7 +85,7 @@ export interface Product {
 }
 
 export interface ProductImage {
-  url: string;
+  path: string;
   isDefault: boolean;
 }
 
