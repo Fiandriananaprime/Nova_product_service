@@ -398,7 +398,7 @@ export class ProductRepository {
 
             const stock = await prisma.inventory.findUnique({
                 where:{productId:id},
-                select:{stock:true}
+                select:{stock:true,threshold:true}
             })
             const productSeller: Product = {
                 id: product.id,
@@ -412,7 +412,7 @@ export class ProductRepository {
                 storeName: product.storeName,
                 categoryId: product.categoryId,
                 categoryName: product.categoryName,
-                lowStockThreshold: product.lowStockThreshold,
+                lowStockThreshold: stock?.threshold ?? 0,
                 stock: stock?.stock ?? 0,
                 images: product.images.map(image => ({
                     path: image.path,

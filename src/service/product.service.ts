@@ -73,7 +73,12 @@ export class ProductService {
             price: Number(product.price),
             rating: Number(product.rating),
             stock: inventory.stock,
+            lowStockThreshold: inventory.threshold,
             variants: parseProductVariants(product.variants),
+            images: product.images.map((image) => ({
+                ...image,
+                path: image.path,
+            })),
         };
     }
 
