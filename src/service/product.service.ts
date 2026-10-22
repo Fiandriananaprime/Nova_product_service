@@ -186,7 +186,7 @@ export class ProductService {
                 ...product,
                 price: Number(product.price),
                 rating: Number(product.rating),
-                images: product.images[0]?.url ?? "",
+                images: product.images[0]?.path ?? "",
                 createdAt: product.createdAt.toISOString(),
             })),
             meta: {
