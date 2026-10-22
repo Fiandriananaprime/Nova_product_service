@@ -98,7 +98,7 @@ CREATE TABLE product_images (
 
     product_id UUID NOT NULL,
 
-    url TEXT NOT NULL,
+    path TEXT NOT NULL,
 
     is_default BOOLEAN NOT NULL DEFAULT FALSE,
 
