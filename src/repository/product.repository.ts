@@ -170,9 +170,9 @@ export class ProductRepository {
                 ...productData,
                 storeId,
                 images: {
-                    create: images?.map(({ path, isDefault }) => ({
+                    create: images?.map(({ path, isDefault }, index) => ({
                         path,
-                        isDefault,
+                        isDefault: isDefault || (index === 0 && !images.some((image) => image.isDefault)),
                     })) ?? [],
                 },
             },
