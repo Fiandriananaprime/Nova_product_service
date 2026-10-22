@@ -21,10 +21,8 @@ export type GetProductStoreQueryParam = {
     page?: number,
     limit?: number,
     categoryId?: string,
-    LowStock?: boolean,
-    OutOfStock?: boolean,
-    status: ProductStatus 
-    moderationStatus: ProductModerationStatus,
+    status?: "lowstock" | "outOfStock" | "all";
+    moderationStatus?: ProductModerationStatus,
 }
 export type ProductSummary = {
     id: string;
