@@ -11,6 +11,10 @@ export const SellerRoutes = async (
     await registerProductSchemas(app);
     app.register((route) => {
         route.get<{Querystring: GetProductStoreQueryParam}>("/products",sellerController.getProductsBySellerId.bind(sellerController))
+        route.post<{Params: {productId: string}; Body: {url: string; isDefault?: boolean}}>(
+            "/products/:productId/images",
+            sellerController.uploadProductImage.bind(sellerController),
+        )
         route.post<{Body:ProductInput}>("/products",{schema:{body: { $ref: "ProductInput#" }}},sellerController.createProduct.bind(sellerController))
         route.put<{Body: ProductInput, Params: {productId: string}}>("/products/:productId",{schema:{body: { $ref: "ProductInput#" }}},sellerController.updateProduct.bind(sellerController))
         route.patch<{Params: {productId: string}}>("/products/:productId",sellerController.confirmProduct.bind(sellerController))
