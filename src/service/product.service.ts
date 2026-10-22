@@ -28,14 +28,25 @@ export class ProductService {
         LowStock: number;
         OutOfStock: number;
     }> {
-        const data = await this.productRepository.getProductsBySellerId(sellerId, params);
-        const lowStock = await this.inventoryRepository.getLowStockProducts();
-        const outOfStock = await this.inventoryRepository.getOutOfStockProducts();
+        const [lowStock, outOfStock] = await Promise.all([
+            this.inventoryRepository.getLowStockProducts(),
+            this.inventoryRepository.getOutOfStockProducts(),
+        ]);
+        const inventoryProductIds =
+            params.status === "lowstock" ? lowStock :
+            params.status === "outOfStock" ? outOfStock :
+            undefined;
+
+        const data = await this.productRepository.getProductsBySellerId(
+            sellerId,
+            params,
+            inventoryProductIds,
+        );
 
         return {
             ...data,
             LowStock: lowStock.length,
-            OutOfStock: outOfStock.length
+            OutOfStock: outOfStock.length,
         };
     }
 
