@@ -74,7 +74,7 @@ export class SellerController {
     }
 
     async uploadProductImage(
-        request: FastifyRequest<{ Params: { productId: string }; Body: { url: string; isDefault?: boolean } }>,
+        request: FastifyRequest<{ Params: { productId: string }; Body: { path: string; isDefault?: boolean } }>,
         reply: FastifyReply,
     ) {
         const storeId = request.headers["x-store-id"];
@@ -82,15 +82,15 @@ export class SellerController {
             throw new ForbiddenError("Must have SellerRole");
         }
 
-        const { url, isDefault = false } = request.body ?? {};
-        if (typeof url !== "string" || typeof isDefault !== "boolean") {
-            return reply.status(400).send({ error: { code: "INVALID_IMAGE", message: "url and optional isDefault are required" } });
+        const { path, isDefault = false } = request.body ?? {};
+        if (typeof path !== "string" || typeof isDefault !== "boolean") {
+            return reply.status(400).send({ error: { code: "INVALID_IMAGE", message: "path and optional isDefault are required" } });
         }
 
         const image = await this.productService.addProductImage(
             request.params.productId,
             storeId,
-            url,
+            path,
             isDefault,
         );
         return reply.status(201).send(image);
