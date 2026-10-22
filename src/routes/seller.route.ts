@@ -12,5 +12,6 @@ export const SellerRoutes = async (
     app.register((route) => {
         route.get<{Querystring: GetProductStoreQueryParam}>("/products",sellerController.getProductsBySellerId.bind(sellerController))
         route.post<{Body:ProductInput}>("/products",{schema:{body: { $ref: "ProductInput#" }}},sellerController.createProduct.bind(sellerController))
+        route.put<{Body: ProductInput, Params: {productId: string}}>("/products/:productId",{schema:{body: { $ref: "ProductInput#" }}},sellerController.updateProduct.bind(sellerController))
     },option)
 }

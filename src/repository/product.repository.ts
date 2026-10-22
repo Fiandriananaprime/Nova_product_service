@@ -1,5 +1,6 @@
 import { prisma } from "../database/prisma.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
+import { ProductModerationError } from "../errorHandler/ProductError.js";
 import type { Prisma } from "../generated/prisma/index.js";
 import type { GetProductQueryParam, GetProductStoreQueryParam, ProductBuyer, ProductInput, ProductSpecs, ProductStoreSummary, ProductSummary, ProductVariant } from "../types/product.js";
 
@@ -113,23 +114,55 @@ export class ProductRepository {
         };
     }
 
-    async createProduct(storeId: string, data: ProductInput) {
-        const product = await prisma.product.create({
+    async createProduct(storeId: string, data: ProductInput & { id: string | undefined }) {
+        const { id, images, ...productData } = data;
+        const existingProduct = id ? await prisma.product.findUnique({ where: { id } }) : null;
+        if(existingProduct && existingProduct.moderationStatus === "approved") throw new ProductModerationError();
+        
+        if(!id) return prisma.product.create({
             data: {
-                ...data,
+                ...productData,
                 storeId,
                 images: {
-                    create: data.images?.map(({ url, isDefault }) => ({
+                    create: images?.map(({ url, isDefault }) => ({
                         url,
                         isDefault,
-                    })) || [],
+                    })) ?? [],
                 },
             },
             include: {
                 images: true,
             },
         });
-        return product;
+
+        return prisma.product.upsert({
+            where: { id, storeId },
+            create: {
+                ...productData,
+                id,
+                storeId,
+                images: {
+                    create: images?.map(({ url, isDefault }) => ({
+                        url,
+                        isDefault,
+                    })) ?? [],
+                },
+            },
+            update: {
+                ...productData,
+                storeId,
+                images: {
+                    deleteMany: {},
+                    create: images?.map(({ url, isDefault }) => ({
+                        url,
+                        isDefault,
+                    })) ?? [],
+                },
+            },
+            include: {
+                images: true,
+            },
+        });
     }
     async findProducts(params: GetProductQueryParam) {
         const {

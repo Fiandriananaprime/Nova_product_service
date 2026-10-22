@@ -35,13 +35,13 @@ export class ProductService {
         return products;
     }
 
-    async createDraftProduct(sellerId: string, data: ProductInput): Promise<Product> {
+    async createorUpdateDraftProduct( storeId: string, data: ProductInput,id?:string): Promise<Product> {
         const productSpecs = await this.getCategorySpecs(data.categoryId);
 
         const validatedSpecs = validateProductSpecs(productSpecs, data.specs);
-        const inventory = await this.inventoryRepository.initializeProductInventory(sellerId);
+        const inventory = await this.inventoryRepository.initializeProductInventory(storeId);
         const product = await this.productRepository.createProduct(
-            sellerId, { ...data, specs: validatedSpecs });
+            storeId, { ...data, specs: validatedSpecs,id });
 
         return {
             ...product,
