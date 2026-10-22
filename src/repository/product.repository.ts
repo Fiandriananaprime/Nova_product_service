@@ -72,12 +72,12 @@ export class ProductRepository {
 
         let inventoryProductIds: string[] | undefined;
         if (status === "lowstock") {
-            const rows = await prisma.$queryRaw<{ product_id: string }[]>\`
+            const rows = await prisma.$queryRaw<{ product_id: string }[]>`
                 SELECT product_id
                 FROM inventory
                 WHERE (stock - reserved) > 0
                   AND (stock - reserved) <= threshold
-            \`;
+            `;
             inventoryProductIds = rows.map((row) => row.product_id);
         }
 
