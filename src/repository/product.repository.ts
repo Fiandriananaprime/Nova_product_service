@@ -63,29 +63,23 @@ export class ProductRepository {
         });
     }
     
-    async getProductsBySellerId( sellerId: string,params: GetProductStoreQueryParam,): Promise<{
+    async getProductsBySellerId(
+        sellerId: string,
+        params: GetProductStoreQueryParam,
+        inventoryProductIds?: string[],
+    ): Promise<{
         data: ProductStoreSummary[];
         pagination: { page: number; limit: number; total: number; totalPages: number };
     }> {
         const { search = "", page = 1, limit = 20, status = "all", moderationStatus, categoryId } = params;
         const term = search.trim();
 
-        let inventoryProductIds: string[] = [];
-        if (status === "lowstock") {
-            const rows = await prisma.$queryRaw<{ product_id: string }[]>`
-                SELECT product_id
-                FROM inventory
-                WHERE (stock - reserved) > 0
-                  AND (stock - reserved) <= threshold
-            `;
-            inventoryProductIds = rows.map((row) => row.product_id);
-        }
-
         const where: Prisma.ProductWhereInput = {
             storeId: sellerId,
             deletedAt: null,
-            ...(status === "lowstock" && { id: { in: inventoryProductIds } }),
-            ...(status === "outOfStock" && { inventory: { is: { stock: 0 } } }),
+            ...((status === "lowstock" || status === "outOfStock") && {
+                id: { in: inventoryProductIds ?? [] },
+            }),
             ...(moderationStatus && { moderationStatus }),
             ...(categoryId && { categoryId }),
             ...(term && {
