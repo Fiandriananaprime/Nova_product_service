@@ -8,6 +8,7 @@ import type { GetProductQueryParam, GetProductStoreQueryParam, Product, ProductB
 import type { InventoryRepository } from "../repository/Inventory.repository.js";
 import { parseProductVariants, validateProductSpecs } from "./validation.js";
 import { ForbiddenError } from "../errorHandler/InvalidCredentials.js";
+import { ProductImageError } from "../errorHandler/ProductImageError.js";
 
 export class ProductService {
     constructor(
@@ -236,22 +237,22 @@ export class ProductService {
         try {
             parsedUrl = new URL(url);
         } catch {
-            throw new Error("Invalid Firebase Storage URL");
+            throw new ProductImageError("Invalid Firebase Storage URL", 400);
         }
 
         const allowedHosts = new Set(["firebasestorage.googleapis.com", "storage.googleapis.com"]);
         if (parsedUrl.protocol !== "https:" || !allowedHosts.has(parsedUrl.hostname)) {
-            throw new Error("Image URL must point to Firebase Storage");
+            throw new ProductImageError("Image URL must point to Firebase Storage", 400);
         }
 
         // Verify that the uploaded object is publicly/token accessible before storing its URL.
         const response = await fetch(parsedUrl, { method: "HEAD", signal: AbortSignal.timeout(5000) });
         if (!response.ok) {
-            throw new Error("Firebase Storage image does not exist or is not accessible");
+            throw new ProductImageError("Firebase Storage image does not exist or is not accessible", 400);
         }
         const contentType = response.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
         if (!contentType?.startsWith("image/")) {
-            throw new Error("Firebase Storage object is not an image");
+            throw new ProductImageError("Firebase Storage object is not an image", 400);
         }
 
         const image = await this.productRepository.createProductImage(productId, storeId, url, isDefault);
