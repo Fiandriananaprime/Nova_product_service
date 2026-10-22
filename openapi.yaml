@@ -70,7 +70,7 @@ paths:
       tags: [Seller Products]
       operationId: uploadSellerProductImage
       summary: Register a Firebase Storage product image
-      description: The file must already be uploaded to Firebase Storage. The service verifies its URL and image content type, then stores its metadata.
+      description: The file must already be uploaded to Firebase Storage. The service verifies the object path and image content type, then stores the path.
       parameters:
         - name: productId
           in: path
@@ -86,14 +86,14 @@ paths:
           application/json:
             schema:
               type: object
-              required: [url]
+              required: [path]
               additionalProperties: false
               properties:
-                url: { type: string, format: uri }
+                path: { type: string, minLength: 1, maxLength: 1024, example: products/abc123/main.webp }
                 isDefault: { type: boolean, default: false }
       responses:
         '201': { description: Image metadata saved }
-        '400': { description: Invalid URL or non-image object }
+        '400': { description: Invalid path or non-image object }
         '403': { description: Seller role required }
         '404': { description: Product not found in this store }
         '500': { description: Firebase Storage verification failed }
