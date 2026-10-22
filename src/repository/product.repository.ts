@@ -7,7 +7,7 @@ import type { GetProductQueryParam, GetProductStoreQueryParam, Product, ProductB
 
 export class ProductRepository {
 
-    async createProductImage(productId: string, storeId: string, url: string, isDefault: boolean) {
+    async createProductImage(productId: string, storeId: string, path: string, isDefault: boolean) {
         return prisma.$transaction(async (tx) => {
             const product = await tx.product.findFirst({
                 where: { id: productId, storeId, deletedAt: null },
@@ -30,7 +30,7 @@ export class ProductRepository {
             return tx.productImage.create({
                 data: {
                     productId,
-                    url,
+                    path,
                     isDefault: isDefault || currentImageCount === 0,
                     sortOrder: currentImageCount,
                 },
@@ -65,7 +65,7 @@ export class ProductRepository {
                 images: {
                     where: { isDefault: true },
                     orderBy: { sortOrder: "asc" },
-                    select: { url: true },
+                    select: { path: true },
                     take: 1,
                 },
                 inventory: {
@@ -82,7 +82,7 @@ export class ProductRepository {
             return [{
                 productId: product.id,
                 name: product.name,
-                image: product.images[0]?.url ?? "",
+                image: product.images[0]?.path ?? "",
                 price: Number(product.price),
                 sellerId: product.storeId,
                 sellerName: product.storeName,
@@ -152,7 +152,7 @@ export class ProductRepository {
             categoryId: product.categoryId,
             status: product.status,
             moderationStatus: product.moderationStatus,
-            images: product.images.find((image) => image.isDefault)?.url ?? product.images[0]?.url ?? null,
+            images: product.images.find((image) => image.isDefault)?.path ?? product.images[0]?.path ?? null,
             createdAt: product.createdAt.toISOString(),
             tags: product.tags,
             })),
@@ -170,8 +170,8 @@ export class ProductRepository {
                 ...productData,
                 storeId,
                 images: {
-                    create: images?.map(({ url, isDefault }) => ({
-                        url,
+                    create: images?.map(({ path, isDefault }) => ({
+                        path,
                         isDefault,
                     })) ?? [],
                 },
@@ -313,7 +313,7 @@ export class ProductRepository {
             storeId: product.storeId,
             categoryId: product.categoryId,
             status: product.status,
-            images: product.images[0]?.url ?? null,
+            images: product.images[0]?.path ?? null,
             createdAt: product.createdAt.toISOString(),
             tags: product.tags
         }));
@@ -415,7 +415,7 @@ export class ProductRepository {
                 lowStockThreshold: product.lowStockThreshold,
                 stock: stock?.stock ?? 0,
                 images: product.images.map(image => ({
-                    url: image.url,
+                    path: image.path,
                     isDefault: image.isDefault
                 })),
                 sku: product.sku,
