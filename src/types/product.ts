@@ -102,7 +102,7 @@ export interface ProductBuyer {
     categoryId: string;
     categoryName: string;
     images: {
-        url: string;
+        path: string;
         isDefault: boolean;
     }[];
     sku?: string | null;
@@ -129,6 +129,6 @@ export interface ProductInput {
 }
 
 export interface ProductImageInput {
-  url: string;
+  path: string;
   isDefault: boolean;
 }
