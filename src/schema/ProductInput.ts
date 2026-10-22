@@ -56,9 +56,9 @@ export const ProductInputSchema = {
       type: "array",
       items: {
         type: "object",
-        required: ["url"],
+        required: ["path"],
         properties: {
-          url: { type: "string", format: "uri" },
+          path: { type: "string", minLength: 1, maxLength: 1024, pattern: "^[^/].*" },
           isDefault: { type: "boolean", default: false },
         },
         additionalProperties: false,
