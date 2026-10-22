@@ -555,10 +555,9 @@ export class ProductRepository {
     }
 
     async deleteProduct(productId: string){
-        const product = await prisma.product.update({
+        await prisma.product.update({
             where:{id: productId},
             data:{deletedAt: new Date(), status:"inactive"}
         })
-        return product;
     }
 }

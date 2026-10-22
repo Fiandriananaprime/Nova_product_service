@@ -25,8 +25,18 @@ export class ProductService {
     async getProductsBySellerId(sellerId: string, params: GetProductStoreQueryParam): Promise<{
         data: ProductStoreSummary[];
         pagination: { page: number; limit: number; total: number; totalPages: number };
+        LowStock: number;
+        OutOfStock: number;
     }> {
-        return this.productRepository.getProductsBySellerId(sellerId, params);
+        const data = await this.productRepository.getProductsBySellerId(sellerId, params);
+        const lowStock = await this.inventoryRepository.getLowStockProducts();
+        const outOfStock = await this.inventoryRepository.getOutOfStockProducts();
+
+        return {
+            ...data,
+            LowStock: lowStock.length,
+            OutOfStock: outOfStock.length
+        };
     }
 
     async getFeaturedProducts() {
