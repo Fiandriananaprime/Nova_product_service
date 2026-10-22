@@ -40,4 +40,37 @@ export class SellerController {
 
         return reply.status(200).send(updatedProduct);
     }
+    
+    async confirmProduct(request: FastifyRequest<{Params: {productId: string}}>, reply: FastifyReply){
+        const storeId = request.headers["x-store-id"];
+        const userRole = request.role;
+        const sellerId= request.userId;
+        const productId= request.params.productId;
+
+        if(!storeId || userRole != "SELLER" || !sellerId || typeof storeId !== "string") throw new ForbiddenError("User dont have permission to access this ressources");
+
+        await this.productService.confirmProduct(storeId, productId);
+
+        return reply.status(204).send({message:"Product successfully submitted"});
+    }
+
+    async duplicateProduct(request: FastifyRequest<{Params: {productId: string}}>, reply: FastifyReply){
+        const storeId = request.headers["x-store-id"];
+        const userRole = request.role;
+        const sellerId= request.userId;
+        const productId= request.params.productId;
+        if(!storeId || userRole != "SELLER" || !sellerId || typeof storeId !== "string") throw new ForbiddenError("User dont have permission to access this ressources");
+        const product = await this.productService.duplicateProduct(productId,storeId);
+        return reply.status(201).send(product);
+    }
+
+    async deleteProduct(request: FastifyRequest<{Params: {productId: string}}>, reply: FastifyReply){
+        const storeId = request.headers["x-store-id"];
+        const userRole = request.role;
+        const sellerId= request.userId;
+        const productId= request.params.productId;
+        if(!storeId || userRole != "SELLER" || !sellerId || typeof storeId !== "string") throw new ForbiddenError("User dont have permission to access this ressources");
+        await this.productService.deleteProduct(productId);
+        return reply.status(204).send({message:"Product successfully deleted"});
+    }
 }

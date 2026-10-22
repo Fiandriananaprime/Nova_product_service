@@ -2,9 +2,17 @@ import { prisma } from "../database/prisma.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
 import { ProductModerationError } from "../errorHandler/ProductError.js";
 import type { Prisma } from "../generated/prisma/index.js";
-import type { GetProductQueryParam, GetProductStoreQueryParam, ProductBuyer, ProductInput, ProductSpecs, ProductStoreSummary, ProductSummary, ProductVariant } from "../types/product.js";
+import type { GetProductQueryParam, GetProductStoreQueryParam, ProductBuyer, ProductInput, ProductModerationStatus, ProductSpecs, ProductStoreSummary, ProductSummary, ProductVariant } from "../types/product.js";
 
 export class ProductRepository {
+
+    async findProductByIdAndStoreId(productId:string, storeId: string){
+        const product = await prisma.product.findUnique({
+            where:{id:productId,storeId}
+        })
+
+        return product
+    }
 
     async getProductsForGrpc(productIds: string[]) {
         if (productIds.length === 0) return [];
@@ -117,8 +125,8 @@ export class ProductRepository {
     async createProduct(storeId: string, data: ProductInput & { id: string | undefined }) {
         const { id, images, ...productData } = data;
         const existingProduct = id ? await prisma.product.findUnique({ where: { id } }) : null;
-        if(existingProduct && existingProduct.moderationStatus === "approved") throw new ProductModerationError();
-        
+        if(existingProduct && existingProduct.moderationStatus != "draft") throw new ProductModerationError();
+
         if(!id) return prisma.product.create({
             data: {
                 ...productData,
@@ -288,6 +296,7 @@ export class ProductRepository {
             where: {
                 startsAt: { lte: new Date() },
                 OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }],
+                status: "active"
             },
             orderBy: { position: "asc" },
             take: 8,
@@ -534,5 +543,22 @@ export class ProductRepository {
 
             take: limit + 1,
         });
+    }
+
+    async confirmProduct(productId: string,storeId: string, moderationStatus:ProductModerationStatus){
+        const product = await prisma.product.update({
+            where:{id: productId, storeId},
+            data:{moderationStatus}
+        })
+
+        return product
+    }
+
+    async deleteProduct(productId: string){
+        const product = await prisma.product.update({
+            where:{id: productId},
+            data:{deletedAt: new Date(), status:"inactive"}
+        })
+        return product;
     }
 }

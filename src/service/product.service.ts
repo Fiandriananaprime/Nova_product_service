@@ -2,7 +2,7 @@ import { getRelatedCategoryIds } from "../client/grpc/store.client.js";
 import { getCategorySpecs as getCategorySpecsFromStore } from "../client/grpc/category-spec.client.js";
 import type { CategorySpec } from "../client/grpc/category-spec.client.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
-import { ProductNotFoundError } from "../errorHandler/ProductError.js";
+import { ProductModerationError, ProductNotFoundError } from "../errorHandler/ProductError.js";
 import type { ProductRepository } from "../repository/product.repository.js";
 import type { GetProductQueryParam, GetProductStoreQueryParam, Product, ProductInput, ProductStoreSummary } from "../types/product.js";
 import type { InventoryRepository } from "../repository/Inventory.repository.js";
@@ -165,5 +165,49 @@ export class ProductService {
                 hasMore,
             },
         };
+    }
+
+    async confirmProduct(storeId: string, productId: string) {
+        const product = await this.productRepository.findProductByIdAndStoreId(productId, storeId);
+        if (!product) throw new ProductNotFoundError();
+        if (product.storeId !== storeId) throw new ProductNotFoundError();
+        if (product.moderationStatus !== "draft") throw new ProductModerationError();
+        await this.productRepository.confirmProduct(productId,storeId,"pending");
+    }
+
+    async duplicateProduct(productId: string, storeId: string) {
+        const product = await this.productRepository.findProductById(productId);
+        if (!product) throw new ProductNotFoundError();
+        const data : ProductInput = {
+            name: product.name,
+            storeName: product.storeName,
+            categoryName: product.categoryName,
+            description: product.description,
+            brand: product.brand ?? "",
+            categoryId: product.categoryId,
+            tags: product.tags,
+            price: product.price,
+            stock: 0,
+            specs: product.specs,
+        };
+        const productSpecs = await this.getCategorySpecs(data.categoryId);
+
+        const validatedSpecs = validateProductSpecs(productSpecs, data.specs);
+        const inventory = await this.inventoryRepository.initializeProductInventory(storeId);
+        const duplicatedProduct = await this.productRepository.createProduct(
+            storeId, { ...data, specs: validatedSpecs,id: undefined });
+        return  {
+            ...duplicatedProduct,
+            price: Number(duplicatedProduct.price),
+            rating: Number(duplicatedProduct.rating),
+            stock: inventory.stock,
+            variants: parseProductVariants(duplicatedProduct.variants),
+        };;
+    }
+
+    async deleteProduct(productId: string) {
+        const product = await this.productRepository.findProductById(productId);
+        if (!product) throw new ProductNotFoundError();
+        await this.productRepository.deleteProduct(productId);
     }
 }

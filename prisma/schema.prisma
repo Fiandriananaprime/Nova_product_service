@@ -147,7 +147,7 @@ model Product {
   updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(6)
   moderationStatus ProductModerationStatus @default(draft) @map("moderation_status")
-  status           ProductStatus           @default(inactive)
+  status           ProductStatus           @default(active)
 
   images             ProductImage[]
   inventory          Inventory?
