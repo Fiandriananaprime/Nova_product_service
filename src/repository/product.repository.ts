@@ -199,8 +199,8 @@ export class ProductRepository {
                 storeId,
                 images: {
                     deleteMany: {},
-                    create: images?.map(({ url, isDefault }) => ({
-                        url,
+                    create: images?.map(({ path, isDefault }) => ({
+                        path,
                         isDefault,
                     })) ?? [],
                 },
@@ -357,7 +357,7 @@ export class ProductRepository {
                                 isDefault: true,
                             },
                             select: {
-                                url: true,
+                                path: true,
                             },
                             take: 1,
                         },
@@ -521,7 +521,7 @@ export class ProductRepository {
                 tags: true,
                 images: {
                     where: { isDefault: true },
-                    select: { url: true },
+                    select: { path: true },
                     take: 1
                 }
             },
@@ -607,7 +607,7 @@ export class ProductRepository {
                         isDefault: true,
                     },
                     select: {
-                        url: true,
+                        path: true,
                     },
                     take: 1,
                 },
