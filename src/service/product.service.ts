@@ -9,6 +9,7 @@ import type { InventoryRepository } from "../repository/Inventory.repository.js"
 import { parseProductVariants, validateProductSpecs } from "./validation.js";
 import { ForbiddenError } from "../errorHandler/InvalidCredentials.js";
 import { ProductImageError } from "../errorHandler/ProductImageError.js";
+import { verifyFirebaseImagePath } from "../client/firebase.client.js";
 
 export class ProductService {
     constructor(
@@ -59,6 +60,7 @@ export class ProductService {
     }
 
     async createorUpdateDraftProduct( storeId: string, data: ProductInput,id?:string): Promise<Product> {
+        await this.validateProductImages(data.images ?? []);
         const productSpecs = await this.getCategorySpecs(data.categoryId);
 
         const validatedSpecs = validateProductSpecs(productSpecs, data.specs);
@@ -232,30 +234,17 @@ export class ProductService {
         };;
     }
 
-    async addProductImage(productId: string, storeId: string, url: string, isDefault: boolean) {
-        let parsedUrl: URL;
-        try {
-            parsedUrl = new URL(url);
-        } catch {
-            throw new ProductImageError("Invalid Firebase Storage URL", 400);
+    private async validateProductImages(images: NonNullable<ProductInput["images"]>): Promise<void> {
+        if (images.length > 10) throw new ProductImageError("A product can have at most 10 images", 400);
+        if (images.filter((image) => image.isDefault).length > 1) {
+            throw new ProductImageError("Only one product image can be the default image", 400);
         }
+        for (const image of images) await verifyFirebaseImagePath(image.path);
+    }
 
-        const allowedHosts = new Set(["firebasestorage.googleapis.com", "storage.googleapis.com"]);
-        if (parsedUrl.protocol !== "https:" || !allowedHosts.has(parsedUrl.hostname)) {
-            throw new ProductImageError("Image URL must point to Firebase Storage", 400);
-        }
-
-        // Verify that the uploaded object is publicly/token accessible before storing its URL.
-        const response = await fetch(parsedUrl, { method: "HEAD", signal: AbortSignal.timeout(5000) });
-        if (!response.ok) {
-            throw new ProductImageError("Firebase Storage image does not exist or is not accessible", 400);
-        }
-        const contentType = response.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
-        if (!contentType?.startsWith("image/")) {
-            throw new ProductImageError("Firebase Storage object is not an image", 400);
-        }
-
-        const image = await this.productRepository.createProductImage(productId, storeId, url, isDefault);
+    async addProductImage(productId: string, storeId: string, path: string, isDefault: boolean) {
+        await verifyFirebaseImagePath(path);
+        const image = await this.productRepository.createProductImage(productId, storeId, path, isDefault);
         if (!image) throw new ProductNotFoundError();
         return image;
     }
