@@ -70,7 +70,7 @@ export class ProductRepository {
         const { search = "", page = 1, limit = 20, status = "all", moderationStatus, categoryId } = params;
         const term = search.trim();
 
-        let inventoryProductIds: string[] | undefined;
+        let inventoryProductIds: string[] = [];
         if (status === "lowstock") {
             const rows = await prisma.$queryRaw<{ product_id: string }[]>`
                 SELECT product_id
