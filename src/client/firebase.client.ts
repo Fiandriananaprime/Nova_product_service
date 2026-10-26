@@ -2,7 +2,7 @@ import { applicationDefault, getApps, initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { ProductImageError } from "../errorHandler/ProductImageError.js";
 
-const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+const bucketName = process.env["FIREBASE_STORAGE_BUCKET"];
 
 function getFirebaseBucket() {
     if (!bucketName) {

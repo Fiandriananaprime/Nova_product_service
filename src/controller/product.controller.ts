@@ -21,7 +21,7 @@ export class ProductController {
 
     async findProductById(request: FastifyRequest<{Params:{id:string}}>, reply: FastifyReply){
         const id = request.params.id
-        const product = await this.productService.findProductById(id)
+        const product = await this.productService.findProductById(id,"BUYER")
 
         return reply.status(200).send(product)
     }
