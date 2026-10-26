@@ -40,6 +40,7 @@ RUN --mount=type=cache,target=/root/.npm \
 	&& rm -f .npmrc
 
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/src/client/grpc/proto ./dist/client/grpc/proto
 COPY --from=build /app/src/generated/prisma ./dist/generated/prisma
 
 EXPOSE 3003

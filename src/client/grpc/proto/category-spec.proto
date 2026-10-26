@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package categoryspec;
+
+service CategorySpecService {
+  rpc GetCategorySpecs(GetCategorySpecsRequest) returns (GetCategorySpecsResponse);
+}
+
+message GetCategorySpecsRequest {
+  string category_id = 1;
+}
+
+message GetCategorySpecsResponse {
+  string category_id = 1;
+  repeated CategorySpec specs = 2;
+}
+
+message CategorySpec {
+  string id = 1;
+  string category_id = 2;
+  string key = 3;
+  string name = 4;
+  string type = 5;
+  bool required = 6;
+  bool filterable = 7;
+  bool searchable = 8;
+  string options_json = 9;
+}

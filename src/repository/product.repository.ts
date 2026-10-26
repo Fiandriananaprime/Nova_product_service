@@ -1,10 +1,211 @@
 import { prisma } from "../database/prisma.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
+import { ProductModerationError } from "../errorHandler/ProductError.js";
+import { ProductImageError } from "../errorHandler/ProductImageError.js";
 import type { Prisma } from "../generated/prisma/index.js";
-import type { GetProductQueryParam, ProductBuyer, ProductSpecs, ProductSummary, ProductVariant } from "../types/product.js";
+import type { GetProductQueryParam, GetProductStoreQueryParam, Product, ProductBuyer, ProductInput, ProductModerationStatus, ProductSpecs, ProductStoreSummary, ProductSummary, ProductVariant } from "../types/product.js";
 
 export class ProductRepository {
+
+    async createProductImage(productId: string, storeId: string, path: string, isDefault: boolean) {
+        return prisma.$transaction(async (tx) => {
+            const product = await tx.product.findFirst({
+                where: { id: productId, storeId, deletedAt: null },
+                select: { id: true },
+            });
+            if (!product) return null;
+
+            const currentImageCount = await tx.productImage.count({ where: { productId } });
+            if (currentImageCount >= 10) {
+                throw new ProductImageError("A product can have at most 10 images", 400);
+            }
+
+            if (isDefault) {
+                await tx.productImage.updateMany({
+                    where: { productId, isDefault: true },
+                    data: { isDefault: false },
+                });
+            }
+
+            return tx.productImage.create({
+                data: {
+                    productId,
+                    path,
+                    isDefault: isDefault || currentImageCount === 0,
+                    sortOrder: currentImageCount,
+                },
+            });
+        });
+    }
+
+    async findProductByIdAndStoreId(productId:string, storeId: string){
+        const product = await prisma.product.findUnique({
+            where:{id:productId,storeId}
+        })
+
+        return product
+    }
+
+    async getProductsForGrpc(productIds: string[]) {
+        if (productIds.length === 0) return [];
+
+        const products = await prisma.product.findMany({
+            where: {
+                id: { in: productIds },
+                deletedAt: null,
+            },
+            select: {
+                id: true,
+                name: true,
+                price: true,
+                rating: true,
+                reviewsCount: true,
+                storeId: true,
+                storeName: true,
+                images: {
+                    where: { isDefault: true },
+                    orderBy: { sortOrder: "asc" },
+                    select: { path: true },
+                    take: 1,
+                },
+                inventory: {
+                    select: { stock: true },
+                },
+            },
+        });
+
+        const productsById = new Map(products.map((product) => [product.id, product]));
+        return productIds.flatMap((productId) => {
+            const product = productsById.get(productId);
+            if (!product) return [];
+
+            return [{
+                productId: product.id,
+                name: product.name,
+                image: product.images[0]?.path ?? "",
+                price: Number(product.price),
+                sellerId: product.storeId,
+                sellerName: product.storeName,
+                stock: product.inventory?.stock ?? 0,
+                rating: Number(product.rating),
+                reviewCount: product.reviewsCount,
+                storeId: product.storeId,
+                storeName: product.storeName,
+            }];
+        });
+    }
     
+    async getProductsBySellerId(
+        sellerId: string,
+        params: GetProductStoreQueryParam,
+    ): Promise<{
+        data: ProductStoreSummary[];
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+    }> {
+        const { search = "", page = 1, limit = 20, moderationStatus, categoryId } = params;
+        const term = search.trim();
+
+        const where: Prisma.ProductWhereInput = {
+            storeId: sellerId,
+            deletedAt: null,
+            ...(moderationStatus && { moderationStatus }),
+            ...(categoryId && { categoryId }),
+            ...(term && {
+            OR: [
+                { name: { contains: term, mode: "insensitive" } },
+                { brand: { contains: term, mode: "insensitive" } },
+                { description: { contains: term, mode: "insensitive" } },
+                { sku: { contains: term, mode: "insensitive" } },
+                { categoryName: { contains: term, mode: "insensitive" } },
+                { tags: { has: term } },
+            ],
+            }),
+        };
+
+        const [products, total] = await prisma.$transaction([
+            prisma.product.findMany({
+            where,
+            skip: (page - 1) * limit,
+            take: limit,
+            orderBy: { createdAt: "desc" },
+            include: {
+                images: {
+                orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }],
+                },
+            },
+            }),
+            prisma.product.count({ where }),
+        ]);
+
+        return {
+            data: products.map((product): ProductStoreSummary => ({
+            id: product.id,
+            name: product.name,
+            brand: product.brand,
+            price: product.price.toNumber(),
+            rating: product.rating.toNumber(),
+            reviewsCount: product.reviewsCount,
+            categoryId: product.categoryId,
+            status: product.status,
+            moderationStatus: product.moderationStatus,
+            images: product.images.find((image) => image.isDefault)?.path ?? product.images[0]?.path ?? null,
+            createdAt: product.createdAt.toISOString(),
+            tags: product.tags,
+            })),
+            pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        };
+    }
+
+    async createProduct(storeId: string, data: ProductInput & { id: string | undefined }) {
+        const { id, images, ...productData } = data;
+        const existingProduct = id ? await prisma.product.findUnique({ where: { id } }) : null;
+        if(existingProduct && existingProduct.moderationStatus != "draft") throw new ProductModerationError();
+
+        if(!id) return prisma.product.create({
+            data: {
+                ...productData,
+                storeId,
+                images: {
+                    create: images?.map(({ path, isDefault }, index) => ({
+                        path,
+                        isDefault: isDefault || (index === 0 && !images?.some((image) => image.isDefault)),
+                    })) ?? [],
+                },
+            },
+            include: {
+                images: true,
+            },
+        });
+
+        return prisma.product.upsert({
+            where: { id, storeId },
+            create: {
+                ...productData,
+                id,
+                storeId,
+                images: {
+                    create: images?.map(({ path, isDefault }, index) => ({
+                        path,
+                        isDefault: isDefault || (index === 0 && !images?.some((image) => image.isDefault)),
+                    })) ?? [],
+                },
+            },
+            update: {
+                ...productData,
+                storeId,
+                images: {
+                    deleteMany: {},
+                    create: images?.map(({ path, isDefault }, index) => ({
+                        path,
+                        isDefault: isDefault || (index === 0 && !images?.some((image) => image.isDefault)),
+                    })) ?? [],
+                },
+            },
+            include: {
+                images: true,
+            },
+        });
+    }
     async findProducts(params: GetProductQueryParam) {
         const {
             search = "",
@@ -82,7 +283,7 @@ export class ProductRepository {
                             isDefault: true
                         },
                         select: {
-                            url: true
+                            path: true
                         },
                         take: 1
                     }
@@ -108,7 +309,7 @@ export class ProductRepository {
             storeId: product.storeId,
             categoryId: product.categoryId,
             status: product.status,
-            images: product.images[0]?.url ?? null,
+            images: product.images[0]?.path ?? null,
             createdAt: product.createdAt.toISOString(),
             tags: product.tags
         }));
@@ -129,6 +330,7 @@ export class ProductRepository {
             where: {
                 startsAt: { lte: new Date() },
                 OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }],
+                status: "active"
             },
             orderBy: { position: "asc" },
             take: 8,
@@ -151,7 +353,7 @@ export class ProductRepository {
                                 isDefault: true,
                             },
                             select: {
-                                url: true,
+                                path: true,
                             },
                             take: 1,
                         },
@@ -170,7 +372,7 @@ export class ProductRepository {
             storeId: product.storeId,
             categoryId: product.categoryId,
             status: product.status,
-            images: product.images[0]?.url ?? null,
+            images: product.images[0]?.path ?? null,
             createdAt: product.createdAt.toISOString(),
             tags: product.tags,
         }));
@@ -180,13 +382,52 @@ export class ProductRepository {
         };
     }
 
-    async findProductById(id: string): Promise<ProductBuyer | null>{
+    async findProductById(id: string, role: "SELLER" | "BUYER", storeId?: string): Promise< Product | ProductBuyer | null>{
         const product = await prisma.product.findUnique({
             where: {id},
             include:{images:true}
         })
         if(!product) return null
 
+        if(role === "SELLER" && storeId){
+            if(product.storeId !== storeId) return null
+
+            const stock = await prisma.inventory.findUnique({
+                where:{productId:id},
+                select:{stock:true,threshold:true}
+            })
+            const productSeller: Product = {
+                id: product.id,
+                name: product.name,
+                brand: product.brand,
+                description: product.description,
+                price: Number(product.price),
+                rating: Number(product.rating),
+                reviewsCount: product.reviewsCount,
+                storeId: product.storeId,
+                storeName: product.storeName,
+                categoryId: product.categoryId,
+                categoryName: product.categoryName,
+                lowStockThreshold: stock?.threshold ?? 0,
+                stock: stock?.stock ?? 0,
+                images: product.images.map(image => ({
+                    path: image.path,
+                    isDefault: image.isDefault
+                })),
+                sku: product.sku,
+                tags: product.tags,
+                specs: product.specs as ProductSpecs,
+                variants: product.variants as ProductVariant[],
+                status: product.status,
+                moderationStatus: product.moderationStatus,
+                createdAt: product.createdAt,
+                updatedAt: product.updatedAt,
+                views: product.views,
+                soldCount: product.soldCount,
+                wishlistCount: product.wishlistCount
+            }
+            return productSeller
+        }
         return {
             id: product.id,
             name: product.name,
@@ -276,7 +517,7 @@ export class ProductRepository {
                 tags: true,
                 images: {
                     where: { isDefault: true },
-                    select: { url: true },
+                    select: { path: true },
                     take: 1
                 }
             },
@@ -307,7 +548,7 @@ export class ProductRepository {
                 ...p,
                 price: Number(p.price),
                 rating: Number(p.rating),
-                images: p.images[0]?.url ?? null,
+                images: p.images[0]?.path ?? null,
                 createdAt: p.createdAt.toISOString()
             })),
             meta: {
@@ -362,7 +603,7 @@ export class ProductRepository {
                         isDefault: true,
                     },
                     select: {
-                        url: true,
+                        path: true,
                     },
                     take: 1,
                 },
@@ -375,5 +616,21 @@ export class ProductRepository {
 
             take: limit + 1,
         });
+    }
+
+    async confirmProduct(productId: string,storeId: string, moderationStatus:ProductModerationStatus){
+        const product = await prisma.product.update({
+            where:{id: productId, storeId},
+            data:{moderationStatus}
+        })
+
+        return product
+    }
+
+    async deleteProduct(productId: string){
+        await prisma.product.update({
+            where:{id: productId},
+            data:{deletedAt: new Date(), status:"inactive"}
+        })
     }
 }

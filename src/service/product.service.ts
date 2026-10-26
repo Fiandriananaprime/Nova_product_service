@@ -1,16 +1,39 @@
 import { getRelatedCategoryIds } from "../client/grpc/store.client.js";
+import { getCategorySpecs as getCategorySpecsFromStore } from "../client/grpc/category-spec.client.js";
+import type { CategorySpec } from "../client/grpc/category-spec.client.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
-import { ProductNotFoundError } from "../errorHandler/ProductError.js";
+import { ProductModerationError, ProductNotFoundError } from "../errorHandler/ProductError.js";
 import type { ProductRepository } from "../repository/product.repository.js";
-import type { GetProductQueryParam } from "../types/product.js";
+import type { GetProductQueryParam, GetProductStoreQueryParam, Product, ProductBuyer, ProductInput, ProductStoreSummary } from "../types/product.js";
+import type { InventoryRepository } from "../repository/Inventory.repository.js";
+import { parseProductVariants, validateProductSpecs } from "./validation.js";
+import { ForbiddenError } from "../errorHandler/InvalidCredentials.js";
+import { ProductImageError } from "../errorHandler/ProductImageError.js";
+import { verifyFirebaseImagePath } from "../client/firebase.client.js";
+import type { GetinventoryQueryParams, InventoryItem } from "../types/inventory.js";
 
 export class ProductService {
     constructor(
-        private readonly productRepository : ProductRepository
+        private readonly productRepository : ProductRepository,
+        private readonly inventoryRepository: InventoryRepository
     ){}
+
+    async getCategorySpecs(categoryId: string): Promise<CategorySpec[]> {
+        return getCategorySpecsFromStore(categoryId);
+    }
 
     async findProducts( params: GetProductQueryParam){
         return this.productRepository.findProducts(params)
+    }
+
+    async getProductsBySellerId(sellerId: string, params: GetProductStoreQueryParam): Promise<{
+        data: ProductStoreSummary[];
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+    }> {
+        const data = await this.productRepository.getProductsBySellerId( sellerId,params );
+        return {
+            ...data,
+        };
     }
 
     async getFeaturedProducts() {
@@ -19,10 +42,37 @@ export class ProductService {
         return products;
     }
 
-    async findProductById(id: string){
-        const product = await this.productRepository.findProductById(id);
+    async createorUpdateDraftProduct( storeId: string, data: ProductInput,id?:string): Promise<Product> {
+        await this.validateProductImages(data.images ?? []);
+        const productSpecs = await this.getCategorySpecs(data.categoryId);
+
+        const validatedSpecs = validateProductSpecs(productSpecs, data.specs);
+        const inventory = await this.inventoryRepository.initializeProductInventory(storeId);
+        const product = await this.productRepository.createProduct(
+            storeId, { ...data, specs: validatedSpecs,id });
+
+        return {
+            ...product,
+            price: Number(product.price),
+            rating: Number(product.rating),
+            stock: inventory.stock,
+            lowStockThreshold: inventory.threshold,
+            variants: parseProductVariants(product.variants),
+            images: product.images.map((image) => ({
+                ...image,
+                path: image.path,
+            })),
+        };
+    }
+
+    async findProductById(id: string, role: "SELLER" | "BUYER", storeId?: string): Promise<Product | ProductBuyer> {
+        const product = await this.productRepository.findProductById(id, role, storeId);
 
         if(!product) throw new ProductNotFoundError()
+
+        if(role === "SELLER" && storeId){
+            if(product.storeId !== storeId) throw new ForbiddenError("Product does not belong to the specified store");
+        }
 
         return product
     }
@@ -36,7 +86,7 @@ export class ProductService {
             throw new InvalidPaginationError("limit must be an integer between 1 and 100");
         }
 
-        const product = await this.productRepository.findProductById(productId);
+        const product = await this.productRepository.findProductById(productId,"BUYER");
 
         if (!product)
             throw new Error("Product not found");
@@ -124,7 +174,7 @@ export class ProductService {
                 ...product,
                 price: Number(product.price),
                 rating: Number(product.rating),
-                images: product.images[0]?.url ?? "",
+                images: product.images[0]?.path ?? "",
                 createdAt: product.createdAt.toISOString(),
             })),
             meta: {
@@ -132,5 +182,90 @@ export class ProductService {
                 hasMore,
             },
         };
+    }
+
+    async confirmProduct(storeId: string, productId: string) {
+        const product = await this.productRepository.findProductByIdAndStoreId(productId, storeId);
+        if (!product) throw new ProductNotFoundError();
+        if (product.storeId !== storeId) throw new ProductNotFoundError();
+        if (product.moderationStatus !== "draft") throw new ProductModerationError();
+        await this.productRepository.confirmProduct(productId,storeId,"pending");
+    }
+
+    async duplicateProduct(productId: string, storeId: string) {
+        const product = await this.productRepository.findProductById(productId, "SELLER", storeId);
+        if (!product) throw new ProductNotFoundError();
+        const data : ProductInput = {
+            name: product.name,
+            storeName: product.storeName,
+            categoryName: product.categoryName,
+            description: product.description,
+            brand: product.brand ?? "",
+            categoryId: product.categoryId,
+            tags: product.tags,
+            price: product.price,
+            stock: 0,
+            specs: product.specs ?? {},
+        };
+        const productSpecs = await this.getCategorySpecs(data.categoryId);
+
+        const validatedSpecs = validateProductSpecs(productSpecs, data.specs);
+        const inventory = await this.inventoryRepository.initializeProductInventory(storeId);
+        const duplicatedProduct = await this.productRepository.createProduct(
+            storeId, { ...data, specs: validatedSpecs,id: undefined });
+        return  {
+            ...duplicatedProduct,
+            price: Number(duplicatedProduct.price),
+            rating: Number(duplicatedProduct.rating),
+            stock: inventory.stock,
+            variants: parseProductVariants(duplicatedProduct.variants),
+        };;
+    }
+
+    private async validateProductImages(images: NonNullable<ProductInput["images"]>): Promise<void> {
+        if (images.length > 10) throw new ProductImageError("A product can have at most 10 images", 400);
+        if (images.filter((image) => image.isDefault).length > 1) {
+            throw new ProductImageError("Only one product image can be the default image", 400);
+        }
+        for (const image of images) await verifyFirebaseImagePath(image.path);
+    }
+
+    async addProductImage(productId: string, storeId: string, path: string, isDefault: boolean) {
+        await verifyFirebaseImagePath(path);
+        const image = await this.productRepository.createProductImage(productId, storeId, path, isDefault);
+        if (!image) throw new ProductNotFoundError();
+        return image;
+    }
+
+    async deleteProduct(productId: string,storeId: string) {
+        const product = await this.productRepository.findProductById(productId, "SELLER", storeId);
+        if (!product) throw new ProductNotFoundError();
+        await this.productRepository.deleteProduct(productId);
+    }
+
+    async updateProductStock(productId: string,storeId: string,data: {stock: number, threshold: number}): Promise<InventoryItem> {
+        const product = await this.productRepository.findProductById(productId, "SELLER", storeId);
+        if (!product) throw new ProductNotFoundError();
+        const inventory = await this.inventoryRepository.updateInventory(productId, { stock: data.stock, threshold: data.threshold });
+        if (!inventory) throw new ProductNotFoundError();
+        return {
+            ...inventory,
+            status:
+                inventory.stock === 0
+                    ? "out_of_stock"
+                    : inventory.threshold > 0
+                    ? inventory.stock > inventory.threshold
+                        ? "in_stock"
+                        : "low_stock"
+                    : inventory.stock < 10
+                        ? "critical"
+                        : "in_stock",
+            name: product.name
+        };
+    }
+
+    async getInventory(storeId: string, params: GetinventoryQueryParams): Promise<{data: InventoryItem[];total: number;page: number;limit: number;totalPages: number}> {
+        const inventory = await this.inventoryRepository.getInventory(storeId, params);
+        return inventory;
     }
 }

@@ -36,13 +36,16 @@
   "homepage": "https://github.com/Fiandriananaprime/Nova_product_service#readme",
   "dependencies": {
     "@Fiandriananaprime/nova_api_type": "^1.1.5",
-    "@Fiandriananaprime/nova_grpc": "^0.1.0",
+    "@Fiandriananaprime/nova_grpc": "^0.3.0",
     "@Fiandriananaprime/service-core": "^1.0.1",
+    "@grpc/grpc-js": "^1.14.5",
+    "@grpc/proto-loader": "^0.8.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "amqplib": "^2.2.0",
     "dotenv": "^17.4.2",
     "fastify": "^5.12.4",
+    "firebase-admin": "^14.5.0",
     "pg": "^8.23.0"
   },
   "devDependencies": {

@@ -135,7 +135,6 @@ model Product {
   storeName         String        @map("store_name")
   categoryId        String        @map("category_id") @db.Uuid
   categoryName      String        @map("category_name")
-  lowStockThreshold Int           @default(10) @map("low_stock_threshold")
   sku               String?
   tags              String[]      @default([])
   specs             Json          @default("{}")
@@ -147,7 +146,7 @@ model Product {
   updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(6)
   moderationStatus ProductModerationStatus @default(draft) @map("moderation_status")
-  status           ProductStatus           @default(inactive)
+  status           ProductStatus           @default(active)
 
   images             ProductImage[]
   inventory          Inventory?
@@ -183,7 +182,7 @@ model FeaturedProduct {
 model ProductImage {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   productId String   @map("product_id") @db.Uuid
-  url       String
+  path      String
   isDefault Boolean  @default(false) @map("is_default")
   sortOrder Int      @default(0) @map("sort_order")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -262,7 +261,7 @@ model ProductModerationHistory {
 
 model Promotion {
   id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  storeId             String?         @map("store_id") @db.Uuid
+  storeId             String         @map("store_id") @db.Uuid
   name                String
   type                PromotionType
   discount            Decimal         @db.Decimal(19, 4)
@@ -270,6 +269,7 @@ model Promotion {
   endDate             DateTime        @map("end_date") @db.Date
   status              PromotionStatus @default(scheduled)
   code                String?
+  description         String?
   minimumOrderAmount  Decimal?        @map("minimum_order_amount") @db.Decimal(19, 4)
   maximumDiscount     Decimal?        @map("maximum_discount") @db.Decimal(19, 4)
   usageLimit          Int?            @map("usage_limit")
@@ -301,6 +301,7 @@ model PromotionUsage {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   promotionId     String   @map("promotion_id") @db.Uuid
   userId          String   @map("user_id") @db.Uuid
+  productId       String   @map("product_id") @db.Uuid
   orderId         String?  @map("order_id")
   discountAmount  Decimal  @map("discount_amount") @db.Decimal(19, 4)
   usedAt          DateTime @default(now()) @map("used_at") @db.Timestamptz(6)
