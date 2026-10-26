@@ -4,6 +4,8 @@ import type { SellerController } from "../controller/seller.controller.js";
 import { registerProductSchemas } from "../schema/ProductInput.js";
 import type { GetinventoryQueryParams } from "../types/inventory.js";
 import { InventoryUpdateSchema } from "../schema/Inventory.js";
+import { PromotionInputSchema } from "../schema/promotion.js";
+import type { PromotionInput } from "../types/promotion.js";
 
 export const SellerRoutes = async (
     app: FastifyInstance,
@@ -25,5 +27,7 @@ export const SellerRoutes = async (
         route.get<{Querystring: GetinventoryQueryParams}>("/products/inventory", sellerController.showInventory.bind(sellerController))
         route.patch<{Params: {productId: string}, Body: {stock: number; threshold: number}}>("/products/:productId/inventory/",{schema:InventoryUpdateSchema},sellerController.updateProductStock.bind(sellerController))
         route.post<{Params: {productId: string, id: string},Body: {response: string}}>("/products/:productId/reviews/:id/",sellerController.replyToReview.bind(sellerController))
+        route.get("/promotions", sellerController.getPromotions.bind(sellerController))
+        route.post<{Body:PromotionInput}>("/promotions",{schema: PromotionInputSchema}, sellerController.createPromotion.bind(sellerController))
     },option)
 }

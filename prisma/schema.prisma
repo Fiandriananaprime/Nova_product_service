@@ -261,7 +261,7 @@ model ProductModerationHistory {
 
 model Promotion {
   id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  storeId             String?         @map("store_id") @db.Uuid
+  storeId             String         @map("store_id") @db.Uuid
   name                String
   type                PromotionType
   discount            Decimal         @db.Decimal(19, 4)
@@ -269,6 +269,7 @@ model Promotion {
   endDate             DateTime        @map("end_date") @db.Date
   status              PromotionStatus @default(scheduled)
   code                String?
+  description         String?
   minimumOrderAmount  Decimal?        @map("minimum_order_amount") @db.Decimal(19, 4)
   maximumDiscount     Decimal?        @map("maximum_discount") @db.Decimal(19, 4)
   usageLimit          Int?            @map("usage_limit")
@@ -300,6 +301,7 @@ model PromotionUsage {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   promotionId     String   @map("promotion_id") @db.Uuid
   userId          String   @map("user_id") @db.Uuid
+  productId       String   @map("product_id") @db.Uuid
   orderId         String?  @map("order_id")
   discountAmount  Decimal  @map("discount_amount") @db.Decimal(19, 4)
   usedAt          DateTime @default(now()) @map("used_at") @db.Timestamptz(6)

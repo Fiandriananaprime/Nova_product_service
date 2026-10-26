@@ -4,14 +4,18 @@ import type { GetProductStoreQueryParam, ProductInput } from "../types/product.j
 import { ForbiddenError } from "../errorHandler/InvalidCredentials.js";
 import type { GetinventoryQueryParams, InventoryItem } from "../types/inventory.js";
 import type { ReviewService } from "../service/review.service.js";
+import type { PromotionInput } from "../types/promotion.js";
+import type { PromotionService } from "../service/promotion.service.js";
 
 export class SellerController {
     private readonly productService: ProductService
     private readonly reviewService: ReviewService
+    private readonly promotionService: PromotionService
 
-    constructor(ps:ProductService, rs:ReviewService){
+    constructor(ps:ProductService, rs:ReviewService, promotionService: PromotionService){
         this.productService=ps;
         this.reviewService=rs;
+        this.promotionService=promotionService;
     }
 
     async getProductById(request: FastifyRequest<{Params: {productId: string}}>, reply: FastifyReply){
@@ -139,5 +143,21 @@ export class SellerController {
 
         const updatedReview = await this.reviewService.replyToReview(storeId,productId, reviewId, response);
         return reply.status(200).send(updatedReview);
+    }
+
+    async getPromotions(request: FastifyRequest, reply: FastifyReply){
+        const storeId = request.headers["x-store-id"];
+        const userRole = request.role;
+        if(!storeId || userRole != "SELLER" || typeof storeId !== "string") throw new ForbiddenError("Must have SellerRole");
+        const promotions = await this.promotionService.getPromotionByStoreId(storeId);
+        return reply.status(200).send(promotions);
+    }
+
+    async createPromotion(request: FastifyRequest<{Body: PromotionInput}>, reply: FastifyReply){
+        const storeId = request.headers["x-store-id"];
+        const userRole = request.role;
+        if(!storeId || userRole != "SELLER" || typeof storeId !== "string") throw new ForbiddenError("Must have SellerRole");
+        const promotion = await this.promotionService.createPromotion(storeId,request.body);
+        return reply.status(201).send(promotion);
     }
 }
