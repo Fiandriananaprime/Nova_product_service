@@ -28,28 +28,10 @@ export class ProductService {
     async getProductsBySellerId(sellerId: string, params: GetProductStoreQueryParam): Promise<{
         data: ProductStoreSummary[];
         pagination: { page: number; limit: number; total: number; totalPages: number };
-        LowStock: number;
-        OutOfStock: number;
     }> {
-        const [lowStock, outOfStock] = await Promise.all([
-            this.inventoryRepository.getLowStockProducts(),
-            this.inventoryRepository.getOutOfStockProducts(),
-        ]);
-        const inventoryProductIds =
-            params.status === "lowstock" ? lowStock :
-            params.status === "outOfStock" ? outOfStock :
-            undefined;
-
-        const data = await this.productRepository.getProductsBySellerId(
-            sellerId,
-            params,
-            inventoryProductIds,
-        );
-
+        const data = await this.productRepository.getProductsBySellerId( sellerId,params );
         return {
             ...data,
-            LowStock: lowStock.length,
-            OutOfStock: outOfStock.length,
         };
     }
 

@@ -98,20 +98,16 @@ export class ProductRepository {
     async getProductsBySellerId(
         sellerId: string,
         params: GetProductStoreQueryParam,
-        inventoryProductIds?: string[],
     ): Promise<{
         data: ProductStoreSummary[];
         pagination: { page: number; limit: number; total: number; totalPages: number };
     }> {
-        const { search = "", page = 1, limit = 20, status = "all", moderationStatus, categoryId } = params;
+        const { search = "", page = 1, limit = 20, moderationStatus, categoryId } = params;
         const term = search.trim();
 
         const where: Prisma.ProductWhereInput = {
             storeId: sellerId,
             deletedAt: null,
-            ...((status === "lowstock" || status === "outOfStock") && {
-                id: { in: inventoryProductIds ?? [] },
-            }),
             ...(moderationStatus && { moderationStatus }),
             ...(categoryId && { categoryId }),
             ...(term && {
