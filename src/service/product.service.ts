@@ -10,6 +10,7 @@ import { parseProductVariants, validateProductSpecs } from "./validation.js";
 import { ForbiddenError } from "../errorHandler/InvalidCredentials.js";
 import { ProductImageError } from "../errorHandler/ProductImageError.js";
 import { verifyFirebaseImagePath } from "../client/firebase.client.js";
+import type { GetinventoryQueryParams, InventoryItem } from "../types/inventory.js";
 
 export class ProductService {
     constructor(
@@ -240,5 +241,31 @@ export class ProductService {
         const product = await this.productRepository.findProductById(productId, "SELLER", storeId);
         if (!product) throw new ProductNotFoundError();
         await this.productRepository.deleteProduct(productId);
+    }
+
+    async updateProductStock(productId: string,storeId: string,data: {stock: number, threshold: number}): Promise<InventoryItem> {
+        const product = await this.productRepository.findProductById(productId, "SELLER", storeId);
+        if (!product) throw new ProductNotFoundError();
+        const inventory = await this.inventoryRepository.updateInventory(productId, { stock: data.stock, threshold: data.threshold });
+        if (!inventory) throw new ProductNotFoundError();
+        return {
+            ...inventory,
+            status:
+                inventory.stock === 0
+                    ? "out_of_stock"
+                    : inventory.threshold > 0
+                    ? inventory.stock > inventory.threshold
+                        ? "in_stock"
+                        : "low_stock"
+                    : inventory.stock < 10
+                        ? "critical"
+                        : "in_stock",
+            name: product.name
+        };
+    }
+
+    async getInventory(storeId: string, params: GetinventoryQueryParams): Promise<{data: InventoryItem[];total: number;page: number;limit: number;totalPages: number}> {
+        const inventory = await this.inventoryRepository.getInventory(storeId, params);
+        return inventory;
     }
 }

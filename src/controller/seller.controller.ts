@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type { ProductService } from "../service/product.service.js";
 import type { GetProductStoreQueryParam, ProductInput } from "../types/product.js";
 import { ForbiddenError } from "../errorHandler/InvalidCredentials.js";
+import type { GetinventoryQueryParams, InventoryItem } from "../types/inventory.js";
 
 export class SellerController {
     private readonly productService: ProductService
@@ -104,5 +105,23 @@ export class SellerController {
         if(!storeId || userRole != "SELLER" || !sellerId || typeof storeId !== "string") throw new ForbiddenError("User dont have permission to access this ressources");
         await this.productService.deleteProduct(productId,storeId);
         return reply.status(204).send({message:"Product successfully deleted"});
+    }
+
+    async showInventory(request: FastifyRequest<{Querystring: GetinventoryQueryParams}>, reply: FastifyReply): Promise<InventoryItem[]> {
+        const storeId = request.headers["x-store-id"];
+        const userRole = request.role;
+        if(!storeId || userRole != "SELLER" || typeof storeId !== "string") throw new ForbiddenError("Must have SellerRole");
+        const inventory = await this.productService.getInventory(storeId,request.query);
+        return reply.status(200).send(inventory);
+    }
+
+    async updateProductStock(request: FastifyRequest<{Params: {productId: string}; Body: {stock: number; threshold: number}}>, reply: FastifyReply):Promise<InventoryItem> {
+        const storeId = request.headers["x-store-id"];
+        const userRole = request.role;
+        const sellerId= request.userId;
+        const productId= request.params.productId;
+        if(!storeId || userRole != "SELLER" || !sellerId || typeof storeId !== "string") throw new ForbiddenError("User dont have permission to access this ressources");
+        const inventory = await this.productService.updateProductStock(productId,storeId,request.body);
+        return reply.status(200).send(inventory);
     }
 }

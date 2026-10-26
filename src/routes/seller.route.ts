@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import type { GetProductStoreQueryParam, ProductInput } from "../types/product.js";
 import type { SellerController } from "../controller/seller.controller.js";
 import { registerProductSchemas } from "../schema/ProductInput.js";
+import type { GetinventoryQueryParams } from "../types/inventory.js";
+import { InventoryUpdateSchema } from "../schema/Inventory.js";
 
 export const SellerRoutes = async (
     app: FastifyInstance,
@@ -20,5 +22,7 @@ export const SellerRoutes = async (
         route.patch<{Params: {productId: string}}>("/products/:productId",sellerController.confirmProduct.bind(sellerController))
         route.post<{Params: {productId: string}}>("/products/:productId", sellerController.duplicateProduct.bind(sellerController))
         route.delete<{Params: {productId: string}}>("/products/:productId", sellerController.deleteProduct.bind(sellerController))
+        route.get<{Querystring: GetinventoryQueryParams}>("/products/inventory", sellerController.showInventory.bind(sellerController))
+        route.patch<{Params: {productId: string}, Body: {stock: number; threshold: number}}>("/products/:productId/inventory/",{schema:InventoryUpdateSchema},sellerController.updateProductStock.bind(sellerController))
     },option)
 }
