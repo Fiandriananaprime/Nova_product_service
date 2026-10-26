@@ -29,5 +29,7 @@ export const SellerRoutes = async (
         route.post<{Params: {productId: string, id: string},Body: {response: string}}>("/products/:productId/reviews/:id/",sellerController.replyToReview.bind(sellerController))
         route.get("/promotions", sellerController.getPromotions.bind(sellerController))
         route.post<{Body:PromotionInput}>("/promotions",{schema: PromotionInputSchema}, sellerController.createPromotion.bind(sellerController))
+        route.put<{Params: {promotionId: string}; Body: PromotionInput}>("/promotions/:promotionId",{schema: PromotionInputSchema}, sellerController.updatePromotion.bind(sellerController))
+        route.delete<{Params: {promotionId: string}}>("/promotions/:promotionId", sellerController.deletePromotion.bind(sellerController))
     },option)
 }

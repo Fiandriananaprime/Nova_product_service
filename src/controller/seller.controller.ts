@@ -160,4 +160,22 @@ export class SellerController {
         const promotion = await this.promotionService.createPromotion(storeId,request.body);
         return reply.status(201).send(promotion);
     }
+
+    async updatePromotion(request: FastifyRequest<{Params: {promotionId: string}; Body: PromotionInput}>, reply: FastifyReply){
+        const storeId = request.headers["x-store-id"];
+        const userRole = request.role;
+        if(!storeId || userRole != "SELLER" || typeof storeId !== "string") throw new ForbiddenError("Must have SellerRole");
+        const promotionId = request.params.promotionId;
+        const promotion = await this.promotionService.updatePromotion(promotionId,request.body);
+        return reply.status(200).send(promotion);
+    }
+
+    async deletePromotion(request: FastifyRequest<{Params: {promotionId: string}}>, reply: FastifyReply){
+        const storeId = request.headers["x-store-id"];
+        const userRole = request.role;
+        if(!storeId || userRole != "SELLER" || typeof storeId !== "string") throw new ForbiddenError("Must have SellerRole");
+        const promotionId = request.params.promotionId;
+        await this.promotionService.deletePromotion(promotionId);
+        return reply.status(204).send();
+    }
 }

@@ -60,4 +60,50 @@ export class PromotionRepository {
             },
         });
     }
+
+    async updatePromotion(promotionId: string, promotionData: PromotionInput) {
+        return prisma.promotion.update({
+            where: { id: promotionId },
+            data: {
+                name: promotionData.name,
+                type: promotionData.type,
+                discount: promotionData.discount,
+                description: promotionData.description ? promotionData.description : null,
+                code: promotionData.code ? promotionData.code : null,
+                startDate: new Date(promotionData.startDate),
+                endDate: new Date(promotionData.endDate),
+                minimumOrderAmount:
+                    promotionData.minimumOrderAmount != null
+                        ? new Prisma.Decimal(promotionData.minimumOrderAmount)
+                        : null,
+
+                    maximumDiscount:
+                    promotionData.maximumDiscount != null? new Prisma.Decimal(promotionData.maximumDiscount)
+                        : null,
+                usageLimit: promotionData.usageLimit,
+                isAutomatic: promotionData.isAutomatic ?? false,
+                products: {
+                    deleteMany: {},
+                    createMany: {
+                        data: promotionData.productIds.map((productId) => ({
+                            productId,
+                        })),
+                    },
+                },
+            },
+            include: {
+                products: {
+                    select: {
+                        productId: true,
+                    },
+                },
+            },
+        });
+    }
+
+    async deletePromotion(promotionId: string,storeId: string) {
+        return prisma.promotion.delete({
+            where: { id: promotionId, storeId },
+        });
+    }
 }
