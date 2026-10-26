@@ -42,7 +42,7 @@ export class ReviewRepository {
                     storeId: true,
                     images: {
                         where: { isDefault: true },
-                        select: { url: true },
+                        select: { path: true },
                         take: 1,
                     },
                 },
@@ -85,7 +85,7 @@ export class ReviewRepository {
                     customerName: "Customer",
                     rating,
                     comment,
-                    productImage: product.images[0]?.url ?? null,
+                    productImage: product.images[0]?.path ?? null,
                     verifiedPurchase: true,
                     status: "pending",
                 },
@@ -232,6 +232,29 @@ export class ReviewRepository {
             hasMore,
             counts,
         };
+    }
+
+    async replyToReview(storeId: string, productId: string, reviewId: string, response: string) {
+        const review = await prisma.review.findFirst({
+            where: {
+                id: reviewId,
+                productId,
+                storeId,
+            },
+        });
+        if (!review) {
+            return null;
+        }
+        return await prisma.review.update({
+            where: {
+                id: reviewId,
+            },
+            data: {
+                reply: response,
+                replied: true,
+                replyDate: new Date(),
+            },
+        });
     }
     
 }

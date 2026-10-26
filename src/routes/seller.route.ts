@@ -24,5 +24,6 @@ export const SellerRoutes = async (
         route.delete<{Params: {productId: string}}>("/products/:productId", sellerController.deleteProduct.bind(sellerController))
         route.get<{Querystring: GetinventoryQueryParams}>("/products/inventory", sellerController.showInventory.bind(sellerController))
         route.patch<{Params: {productId: string}, Body: {stock: number; threshold: number}}>("/products/:productId/inventory/",{schema:InventoryUpdateSchema},sellerController.updateProductStock.bind(sellerController))
+        route.post<{Params: {productId: string, id: string},Body: {response: string}}>("/products/:productId/reviews/:id/",sellerController.replyToReview.bind(sellerController))
     },option)
 }

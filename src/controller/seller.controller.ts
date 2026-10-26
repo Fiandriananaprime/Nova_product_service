@@ -3,12 +3,15 @@ import type { ProductService } from "../service/product.service.js";
 import type { GetProductStoreQueryParam, ProductInput } from "../types/product.js";
 import { ForbiddenError } from "../errorHandler/InvalidCredentials.js";
 import type { GetinventoryQueryParams, InventoryItem } from "../types/inventory.js";
+import type { ReviewService } from "../service/review.service.js";
 
 export class SellerController {
     private readonly productService: ProductService
+    private readonly reviewService: ReviewService
 
-    constructor(ps:ProductService){
-        this.productService=ps
+    constructor(ps:ProductService, rs:ReviewService){
+        this.productService=ps;
+        this.reviewService=rs;
     }
 
     async getProductById(request: FastifyRequest<{Params: {productId: string}}>, reply: FastifyReply){
@@ -123,5 +126,18 @@ export class SellerController {
         if(!storeId || userRole != "SELLER" || !sellerId || typeof storeId !== "string") throw new ForbiddenError("User dont have permission to access this ressources");
         const inventory = await this.productService.updateProductStock(productId,storeId,request.body);
         return reply.status(200).send(inventory);
+    }
+
+    async replyToReview(request: FastifyRequest<{Params: {productId: string, id: string};Body: {response: string}}>, reply: FastifyReply){
+        const storeId = request.headers["x-store-id"];
+        const userRole = request.role;
+        const sellerId= request.userId;
+        const productId= request.params.productId;
+        if(!storeId || userRole != "SELLER" || !sellerId || typeof storeId !== "string") throw new ForbiddenError("User dont have permission to access this ressources");
+        const reviewId= request.params.id;
+        const { response } = request.body;
+
+        const updatedReview = await this.reviewService.replyToReview(storeId,productId, reviewId, response);
+        return reply.status(200).send(updatedReview);
     }
 }

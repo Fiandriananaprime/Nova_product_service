@@ -2,7 +2,7 @@ import type { ReviewRepository } from "../repository/review.repository.js";
 import { ProductNotFoundError } from "../errorHandler/ProductError.js";
 import { AppError } from "../errorHandler/AppError.js";
 import { InvalidPaginationError } from "../errorHandler/PaginationError.js";
-import type { CreateReviewInput } from "../types/review.js";
+import type { CreateReviewInput, Review } from "../types/review.js";
 
 type Cursor = {
     date: string;
@@ -169,6 +169,30 @@ export class ReviewService {
             counts: result.counts,
         };
         
+    }
+
+    async replyToReview(storeId: string, productId: string, reviewId: string, response: string): Promise<Review> {
+        const productReview = await this.reviewRepository.replyToReview(storeId, productId, reviewId, response);
+        if (!productReview) {
+            throw new ProductNotFoundError();
+        }
+        return {
+            id: productReview.id,
+            productId: productReview.productId,
+            customerId: productReview.customerId,
+            storeId: productReview.storeId,
+            rating: productReview.rating,
+            comment: productReview.comment,
+            reply: productReview.reply,
+            verifiedPurchase: productReview.verifiedPurchase,
+            status: productReview.status,
+            date: productReview.date.toISOString(),
+            customerName: productReview.customerName,
+            productName: productReview.productName,
+            replied: productReview.replied,
+            replyDate: productReview.replyDate ? productReview.replyDate.toISOString() : null,
+            helpfulCount: productReview.helpfulCount,
+        };
     }
 
 }
